@@ -11,7 +11,10 @@ APP_VERSION="$(tr -d '\r\n' < VERSION)"
 [[ "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid VERSION.' >&2;exit 1; }
 python tools/fetch-dependencies.py --target windows "$@"
 python tools/build-app-icons.py
-if [[ " ${*:-} " != *" --offline "* ]]; then meson subprojects download --sourcedir vendor/lite-xl; fi
+if [[ " ${*:-} " != *" --offline "* ]]; then
+  # Serial downloads: MSYS2 meson aborts parallel fetches with EDEADLK (msvcrt lock timeout).
+  meson subprojects download --num-processes 1 --sourcedir vendor/lite-xl
+fi
 python tools/prepare-windows-source.py
 setup_args=(dist/windows-build dist/windows-source --buildtype=release --wrap-mode=nodownload -Dportable=true -Duse_system_lua=false)
 if [[ -f dist/windows-build/meson-private/coredata.dat ]]; then

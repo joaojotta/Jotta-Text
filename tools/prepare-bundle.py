@@ -140,6 +140,14 @@ end
     copy(DEPS / 'sources/languages/plugins/minimap.lua', data / 'plugins/minimap.lua')
     replace(data / 'plugins/minimap.lua', 'function MiniMap:is_minimap_enabled()\n',
             'function MiniMap:is_minimap_enabled()\n  if self.dv.size.x < 500 * SCALE then return false end\n')
+    # Reserve a small top inset for both rendering and pointer/drag geometry.
+    replace(data / 'plugins/minimap.lua',
+            '  if not self:is_minimap_enabled() then return MiniMap.super.set_size(self, x, y, w, h, scrollable) end\n',
+            '  if not self:is_minimap_enabled() then return MiniMap.super.set_size(self, x, y, w, h, scrollable) end\n'
+            '  local margin=math.min(6*SCALE,math.max(0,h))\n  y=y+margin\n  h=math.max(0,h-margin)\n')
+    replace(data / 'plugins/minimap.lua',
+            'renderer.draw_rect(x, y, w, self.dv.size.y, style.minimap_background or style.background)',
+            'renderer.draw_rect(x, y, w, math.max(0,self.dv.size.y-6*SCALE), style.minimap_background or style.background)')
     replace(data / 'plugins/litemark/init.lua', 'USERDIR .. "/plugins/litemark"', 'DATADIR .. "/plugins/litemark"')
     # Preview shares application colors/fonts and invalidates all cached appearance.
     markdown_layout = data / 'plugins/litemark/mdlayout.lua'
@@ -165,6 +173,22 @@ end
     replace(markdown_view, 'self._layout_bg = style.background2', 'self._layout_appearance = appearance')
     replace(markdown_view, 'self:draw_background(style.background2)', 'self:draw_background(style.ui_background or style.background)')
     replace(markdown_view, 'local border_color = style.syntax["keyword"]', 'local border_color = style.divider')
+    # Project notes keep their autosave; Markdown preview renders the unsaved buffer.
+    replace(markdown_view, '  if editor.doc:is_dirty() then editor.doc:save() end\n',
+            '  if editor._litemark_kind == "project" and editor.doc.abs_filename and editor.doc:is_dirty() then\n'
+            '    editor.doc:save()\n  end\n')
+    # Preview any Markdown-syntax document (including untitled ones) and reuse an open preview.
+    replace(markdown_view, '    local active = core.active_view\n',
+            '    local active = require("litefront.visual").document_view()\n')
+    replace(markdown_view, '    local filename = active.doc.filename\n    if filename and filename:match("%.md$") then\n',
+            '    if active.doc.syntax and active.doc.syntax.name == "Markdown" then\n'
+            '      local existing\n'
+            '      walk_views(function(view)\n'
+            '        if view.doc == active.doc and view:is(NoteReadView) then existing=view;return true end\n'
+            '      end)\n'
+            '      if existing then core.set_active_view(existing);return end\n')
+    replace(markdown_view, '    and view.doc.filename\n    and view.doc.filename:match("%.md$")\n',
+            '    and view.doc.syntax\n    and view.doc.syntax.name == "Markdown"\n')
     replace(data / 'plugins/lsp/listbox.lua', ', style.background)', ', style.ui_background or style.background)')
     replace(data / 'plugins/autocomplete.lua', ', style.background)', ', style.ui_background or style.background)')
     replace(data / 'plugins/autocomplete.lua',
@@ -188,6 +212,27 @@ local LineWrapping
     lsp.write_text(code)
     replace(lsp, 'if cline ~= line or cchar ~= col then',
             'if core.active_view.doc ~= doc or cline ~= line or cchar ~= col then')
+    # Inline color swatches own the pointer: suppress LSP hover popups over them.
+    replace(lsp, '  if not av:extends(DocView) then return end\n',
+            "  if not av:extends(DocView) then return end\n  if require('litefront.color_inline').at(av,x,y) then return end\n")
+    replace(lsp, '        callback = function(server, response)\n          if response.result and response.result.contents then\n',
+            '        callback = function(server, response)\n'
+            '          if not in_tab and lsp.hover_position.color_suppressed then return end\n'
+            '          if response.result and response.result.contents then\n')
+    replace(lsp, '  root_view_on_mouse_moved(self, x, y, dx, dy)\n\n',
+            """  root_view_on_mouse_moved(self, x, y, dx, dy)
+
+  local node=self.root_node:get_child_overlapping_point(x,y)
+  local view=node and node.active_view
+  local color=view and view:extends(DocView) and require('litefront.color_inline').at(view,x,y)
+  lsp.hover_position.color_suppressed=not not color
+  if color then
+    lsp.hover_timer:stop();lsp.hover_timer:reset()
+    lsp.hover_position.triggered=false;lsp.hover_position.utf8_range=nil
+    listbox.hide()
+    return
+  end
+""")
     # A shared Emmet server can open a document before a newly started CSS/HTML
     # server. Wait for each didOpen to be written, not just initialization: LSP
     # notifications and requests have separate queues and can otherwise race.
