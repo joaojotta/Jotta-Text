@@ -56,7 +56,7 @@ for release notes.
 
 | Edition                | Package                                        | How to open it                                                  |
 | ---------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
-| **Linux · Flatpak**    | `JottaText.flatpak`                            | Install or update with the command below.                       |
+| **Linux · Flatpak**    | `JottaText-<version>-x86_64.flatpak`           | Install or update with the command below.                       |
 | **Linux · AppImage**   | `JottaText-<version>-x86_64.AppImage`          | Mark the file executable, then open it.                         |
 | **Windows · Portable** | `JottaText-<version>-windows-x64-portable.zip` | Extract the whole ZIP and run `JottaText.exe`.                  |
 | **Web**                | `JottaText-<version>-web.zip`                  | Extract and serve over HTTP/HTTPS. [Web guide →](web/README.md) |
@@ -64,7 +64,7 @@ for release notes.
 From the folder containing the downloaded Flatpak bundle:
 
 ```bash
-flatpak install --user --or-update ./JottaText.flatpak
+flatpak install --user --or-update ./JottaText-*-x86_64.flatpak
 ```
 
 For a local build, the bundle is in `dist/`. Close and reopen the app after

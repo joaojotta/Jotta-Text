@@ -32,11 +32,13 @@ flatpak-builder --subject="Jotta Text v$APP_VERSION" --user --force-clean --disa
   dist/build flatpak/io.github.joaojotta.JottaText.json
 BUILT_VERSION="$(tr -d '\r\n' < dist/build/files/share/lite-xl/litefront/VERSION)"
 [[ "$BUILT_VERSION" == "$APP_VERSION" ]] || die "Refusing to bundle stale application: expected $APP_VERSION, built $BUILT_VERSION."
-rm -f dist/JottaText.flatpak.tmp
-flatpak build-bundle dist/flatpak-repo dist/JottaText.flatpak.tmp io.github.joaojotta.JottaText master
-mv -f dist/JottaText.flatpak.tmp dist/JottaText.flatpak
-sha256sum dist/JottaText.flatpak > dist/JottaText.flatpak.sha256
-printf '\nJotta Text v%s Flatpak built: %s/dist/JottaText.flatpak\n' "$APP_VERSION" "$ROOT"
+BUNDLE="JottaText-$APP_VERSION-$(uname -m).flatpak"
+rm -f "dist/$BUNDLE.tmp"
+flatpak build-bundle dist/flatpak-repo "dist/$BUNDLE.tmp" io.github.joaojotta.JottaText master
+mv -f "dist/$BUNDLE.tmp" "dist/$BUNDLE"
+# Name only the file, so the checksum verifies wherever the download is saved.
+(cd dist && sha256sum "$BUNDLE" > "$BUNDLE.sha256")
+printf '\nJotta Text v%s Flatpak built: %s/dist/%s\n' "$APP_VERSION" "$ROOT" "$BUNDLE"
 printf 'The application has not been installed.\n'
 printf 'All editor features are bundled. No plugin setup is required.\n'
-printf 'Install or update: flatpak install --user --or-update ./dist/JottaText.flatpak\n'
+printf 'Install or update: flatpak install --user --or-update ./dist/%s\n' "$BUNDLE"

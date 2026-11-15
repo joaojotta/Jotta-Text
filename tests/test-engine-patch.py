@@ -21,6 +21,6 @@ with tempfile.TemporaryDirectory(prefix='jotta-text-patch-') as directory:
         subprocess.run(['git','-C',str(source),'config','core.autocrlf','true'],check=True)
         subprocess.run(['git','-C',str(source),'-c','core.autocrlf=false','-c','core.eol=lf','checkout','--quiet','--detach','HEAD'],check=True)
         # The helper verifies every baseline and patched file against the manifest.
-        for attempt in range(2):
+        for _ in range(2):  # the second run checks idempotence
             subprocess.run([sys.executable,str(tools/'apply-lite-xl-patch.py')],check=True)
         print('PASS: engine patch application/idempotence with', 'CRLF input' if crlf else 'LF input', 'and Windows Git settings')

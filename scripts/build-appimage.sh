@@ -64,7 +64,8 @@ ARCH="$APP_ARCH" VERSION="$APP_VERSION" APPIMAGE_EXTRACT_AND_RUN=1 \
   --mksquashfs-opt -processors --mksquashfs-opt 2 "$APPDIR" "$OUTPUT.tmp"
 chmod 755 "$OUTPUT.tmp"
 mv -f "$OUTPUT.tmp" "$OUTPUT"
-sha256sum "${OUTPUT#"$ROOT/"}" > "$OUTPUT.sha256"
+# Name only the file, so the checksum verifies wherever the download is saved.
+(cd "$(dirname "$OUTPUT")" && sha256sum "$(basename "$OUTPUT")" > "$OUTPUT.sha256")
 printf '\nJotta Text v%s AppImage built: %s\n' "$APP_VERSION" "$OUTPUT"
 printf 'Run: %s\n' "./${OUTPUT#"$ROOT/"}"
 printf 'The application has not been installed.\n'

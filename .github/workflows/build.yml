@@ -13,6 +13,7 @@ env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '24.11.1'
   PIP_PACKAGES: meson==1.9.1 Pillow==12.0.0
+  LINT_PACKAGES: ruff==0.14.5 shellcheck-py==0.11.0.1
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -38,6 +39,21 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Test settings migration after rename
         run: python3 tests/test-flatpak-migration.py
+
+  lint:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python -m pip install $LINT_PACKAGES
+      - name: Check Python tools and tests for bugs
+        run: ruff check --select E9,F,B --output-format github tools tests
+      - name: Check shell scripts
+        # SC1007: `CDPATH= cd` deliberately clears CDPATH for one command.
+        run: shellcheck --severity=warning --exclude=SC1007 scripts/*.sh scripts/*-launcher
 
   appimage:
     needs: version
@@ -83,6 +99,11 @@ jobs:
             dist/native-build/meson-logs/meson-log.txt
             dist/JottaText-*.AppImage
           if-no-files-found: warn
+      - name: Test native file dialog against a mock desktop portal
+        run: |
+          sudo apt-get install -y python3-gi dbus
+          cc -Wall -Wextra -Werror tools/native/file-dialog.c -o dist/portal-helper $(pkg-config --cflags --libs gio-2.0)
+          dbus-run-session -- /usr/bin/python3 tests/test-portal.py dist/portal-helper
       - name: Test cursor recovery and real language completion
         run: |
           python tests/test-build-tools.py
@@ -137,8 +158,8 @@ jobs:
         with:
           name: JottaText-${{ needs.version.outputs.version }}-Flatpak-x86_64
           path: |
-            dist/JottaText.flatpak
-            dist/JottaText.flatpak.sha256
+            dist/JottaText-*.flatpak
+            dist/JottaText-*.flatpak.sha256
           if-no-files-found: error
 
   windows:
@@ -217,9 +238,11 @@ jobs:
       - name: Install browser test tooling
         run: |
           npm install --prefix dist/browser-test --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
-          dist/browser-test/node_modules/.bin/playwright install --with-deps chromium
+          dist/browser-test/node_modules/.bin/playwright install --with-deps chromium firefox
       - name: Test the compiled editor in Chromium
-        run: node tests/test-web-browser.mjs
+        run: node tests/test-web-browser.mjs chromium
+      - name: Test the compiled editor in Firefox
+        run: node tests/test-web-browser.mjs firefox
       - uses: actions/upload-artifact@v7
         with:
           name: JottaText-${{ needs.version.outputs.version }}-Web
@@ -227,3 +250,38 @@ jobs:
             dist/JottaText-*-web.zip
             dist/JottaText-*-web.zip.sha256
           if-no-files-found: error
+
+  # Publish a GitHub Release for v* tags once every package has been built and tested.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, lint, appimage, flatpak, windows, web]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist/release
+          merge-multiple: true
+      - name: Verify package checksums
+        working-directory: dist/release
+        run: sha256sum --check --strict *.sha256
+      - name: Extract release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          awk -v heading="## Jotta Text v$VERSION " '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > dist/release-notes.md
+          [[ -s dist/release-notes.md ]] || { echo "CHANGELOG.md has no entry for v$VERSION"; exit 1; }
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Jotta Text v$VERSION" \
+            --notes-file dist/release-notes.md dist/release/*

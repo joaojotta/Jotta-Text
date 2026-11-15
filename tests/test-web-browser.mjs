@@ -5,8 +5,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import os from 'node:os';
-const root=path.resolve('dist/web');
-const {chromium}=await import(pathToFileURL(path.resolve('dist/browser-test/node_modules/playwright/index.mjs')));
+// Usage: node tests/test-web-browser.mjs [chromium|firefox] [web directory]
+const browserName=process.argv[2]||'chromium';
+const root=path.resolve(process.argv[3]||'dist/web');
+const playwright=await import(pathToFileURL(path.resolve('dist/browser-test/node_modules/playwright/index.mjs')));
+if(!['chromium','firefox'].includes(browserName))throw new Error(`Unsupported browser: ${browserName}`);
 const server=http.createServer(async(req,res)=>{
   try{
     const name=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://local').pathname));
@@ -17,7 +20,7 @@ const server=http.createServer(async(req,res)=>{
   }catch{res.writeHead(404);res.end();}
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-const browser=await chromium.launch({headless:true,channel:'chromium'});
+const browser=await playwright[browserName].launch({headless:true,...(browserName==='chromium'?{channel:'chromium'}:{})});
 const fixture=await fs.mkdtemp(path.join(os.tmpdir(),'jotta-text-web-'));
 try{
   const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];
@@ -32,7 +35,7 @@ try{
     catch(error){
       console.error('Expected snapshot text:',text,'Page errors:',errors);
       console.error(await page.evaluate(()=>{try{return Module.FS.readFile('/persist/user/documents.lua',{encoding:'utf8'});}catch{return 'No snapshot';}}));
-      await page.screenshot({path:'dist/web-test-failure.png'});throw error;
+      await page.screenshot({path:`dist/web-test-failure-${browserName}.png`});throw error;
     }
   }
   async function importFile(name,source){
@@ -74,5 +77,5 @@ try{
   assert.deepEqual(errors,[]);
   const errorLog=await page.evaluate(()=>Module.FS.analyzePath('/persist/user/error.txt').exists);
   assert.equal(errorLog,false,'The WASM engine wrote an error log');
-  console.log('PASS: compiled browser startup, file/folder imports, unsaved formatting, IndexedDB recovery, live sandboxed preview, Save As download, dialog isolation and shared settings');
+  console.log(`PASS (${browserName}): compiled browser startup, file/folder imports, unsaved formatting, IndexedDB recovery, live sandboxed preview, Save As download, dialog isolation and shared settings`);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));await fs.rm(fixture,{recursive:true,force:true});}

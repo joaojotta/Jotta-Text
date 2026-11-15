@@ -7,11 +7,9 @@ Never binds to a public network interface. PHP is NOT executed.
 import argparse
 import http.server
 import json
-import mimetypes
 import os
 from pathlib import Path
 import threading
-import time
 import urllib.parse
 import webbrowser
 

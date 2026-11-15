@@ -53,7 +53,7 @@ Use the native build prerequisites listed above, plus `ldd` and `sha256sum`:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.6.0-x86_64.AppImage (on an x86_64 host)
+# Output: dist/JottaText-0.6.1-x86_64.AppImage (on an x86_64 host)
 ```
 
 The script builds the editor and packages its native libraries, fonts, Node and
@@ -67,9 +67,9 @@ Nothing is installed; the executable and its SHA-256 checksum are written to
 Run the resulting file directly:
 
 ```bash
-./dist/JottaText-0.6.0-x86_64.AppImage
+./dist/JottaText-0.6.1-x86_64.AppImage
 # Without FUSE:
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.6.0-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.6.1-x86_64.AppImage
 ```
 
 The AppImage shares the native application's `~/.config/litefront` settings and
@@ -77,7 +77,7 @@ session. Close any running native instance before switching builds. The system
 still supplies glibc, graphics drivers and desktop services. Bundling libraries
 does not lower their glibc requirement: build on the oldest Linux distribution
 you intend to support. This source build is not a universal Linux binary.
-The v0.6.0 x86_64 artifact built on this Arch system requires **glibc 2.43 or
+The v0.6.1 x86_64 artifact built on this Arch system requires **glibc 2.43 or
 newer**. Its packaging and editor smoke checks passed on this host; other
 distributions and aarch64 have not been tested.
 
@@ -93,17 +93,17 @@ Install Flatpak, Flatpak Builder, Git, Meson, Python 3 and npm on the build mach
 
 ```bash
 bash scripts/build-flatpak.sh
-# Output: dist/JottaText.flatpak
+# Output: dist/JottaText-0.6.1-x86_64.flatpak
 ```
 
-The script produces `dist/JottaText.flatpak` and its SHA-256 checksum. It does
+The script produces `dist/JottaText-0.6.1-x86_64.flatpak` and its SHA-256 checksum. It does
 not install the application, SDK or runtime, or add Flatpak remotes. Install build
 prerequisites separately as described in [BUILD_UBUNTU.md](../BUILD_UBUNTU.md).
 
 Install a newly built bundle, or update an existing installation:
 
 ```bash
-flatpak install --user --or-update ./dist/JottaText.flatpak
+flatpak install --user --or-update ./dist/JottaText-0.6.1-x86_64.flatpak
 ```
 
 Rebuild the Flatpak after source changes; rebuilding the native app leaves the
@@ -164,7 +164,7 @@ python3 tests/test-live-preview.py
 python3 tests/test-pdf.py  # requires pdfinfo and pdftotext (Poppler)
 python3 tests/test-completion.py
 cc -Wall -Wextra -Werror tools/native/file-dialog.c -o /tmp/litefront-file-dialog $(pkg-config --cflags --libs gio-2.0)
-dbus-run-session -- python3 tests/test_portal.py /tmp/litefront-file-dialog
+dbus-run-session -- python3 tests/test-portal.py /tmp/litefront-file-dialog
 vendor/litefront/node/node --test --test-isolation=none tests/test-preview.mjs
 vendor/litefront/node/node --test --test-isolation=none tests/test-outline.mjs
 ```

@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 import unittest
 from gi.repository import Gio, GLib
 
@@ -46,7 +45,7 @@ class PortalTests(unittest.TestCase):
                 loop.quit()
                 return False
             return True
-        poll = GLib.timeout_add(10, check)
+        GLib.timeout_add(10, check)
         def expire():
             child.kill()
             loop.quit()

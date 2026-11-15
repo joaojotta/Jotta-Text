@@ -31,6 +31,17 @@
     <p>Your workspace copy stays in this browser. The download saves a separate copy to your device.</p>
     <div><button value="cancel" formnovalidate>Cancel</button><button value="save">Download</button></div></form>
   </dialog>
-  <script type="module" src="app.mjs"></script>
+  <script>
+    // Report startup failures instead of leaving the page on "Loading" with disabled buttons.
+    function jottaStartupFailed(message) {
+      if (globalThis.JottaBrowserReady) return;
+      document.getElementById('status').textContent = message;
+    }
+    addEventListener('error', event => {
+      if (event instanceof ErrorEvent) jottaStartupFailed('Jotta Text could not start: ' + event.message);
+    });
+  </script>
+  <script type="module" src="app.mjs"
+    onerror="jottaStartupFailed('Jotta Text could not load its files. Extract the whole ZIP to a folder and serve that folder over HTTP; see README.md.')"></script>
 </body>
 </html>

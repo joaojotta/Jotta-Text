@@ -1,5 +1,21 @@
 # Changelog
 
+## Jotta Text v0.6.1 — 2026-11-15
+
+- Web: report startup problems on the page instead of staying on "Loading Jotta
+  Text…" with every button disabled, for example when only `index.html` was
+  extracted from the ZIP or a script cannot load. If browser storage does not
+  answer within 10 seconds, start without it and say so.
+- Web: test the compiled editor in Firefox as well as Chromium.
+- AppImage and Flatpak checksum files name only the package, so
+  `sha256sum -c` works wherever the download is saved. The Flatpak bundle is
+  now named `JottaText-<version>-x86_64.flatpak`.
+- GitHub Actions publishes the release with all packages when a `v*` tag is
+  built successfully, and checks Python and shell code with ruff and
+  shellcheck.
+- Run the native file dialog test (renamed `tests/test-portal.py`) in CI; fix
+  unused imports and variables found by ruff.
+
 ## Jotta Text v0.6.0 — 2026-11-15
 
 No visible or behavioural changes to the editor; this release fixes the Windows

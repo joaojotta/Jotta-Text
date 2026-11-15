@@ -81,7 +81,7 @@ async function handle(kind,payload){
   if(kind==='sync'){await sync();return true;}
   if(kind==='preview'||kind==='preview-update'||kind==='print'){preview(payload,kind!=='preview-update',kind==='print');return true;}
   if(kind==='ready'){
-    ready=true;document.querySelectorAll('header button').forEach(button=>button.disabled=false);
+    ready=true;globalThis.JottaBrowserReady=true;document.querySelectorAll('header button').forEach(button=>button.disabled=false);
     $('status').textContent=storageAvailable?'Ready · files stay on this device':'Storage unavailable · download files before closing';
     requestAnimationFrame(resize);$('canvas').focus();return true;
   }
@@ -140,17 +140,20 @@ globalThis.Module={
     module.ENV.HOME='/persist';module.ENV.LITE_USERDIR='/persist/user';
     module.addRunDependency('jotta-text-storage');
     FS.mkdirTree('/persist');
+    let started=false;
+    const start=error=>{
+      if(started)return;
+      started=true;
+      if(error){storageAvailable=false;console.error(error);}
+      FS.mkdirTree('/persist/user');FS.mkdirTree(WORKSPACE);FS.chdir(WORKSPACE);
+      module.removeRunDependency('jotta-text-storage');
+    };
+    // A blocked or damaged IndexedDB can leave syncfs pending forever; start without it.
+    setTimeout(()=>start(new Error('Browser storage did not respond within 10 seconds')),10000);
     try{
       FS.mount(module.IDBFS,{},'/persist');
-      FS.syncfs(true,error=>{
-        if(error){storageAvailable=false;console.error(error);}
-        FS.mkdirTree('/persist/user');FS.mkdirTree(WORKSPACE);FS.chdir(WORKSPACE);
-        module.removeRunDependency('jotta-text-storage');
-      });
-    }catch(error){
-      storageAvailable=false;console.error(error);FS.mkdirTree('/persist/user');FS.mkdirTree(WORKSPACE);
-      module.removeRunDependency('jotta-text-storage');
-    }
+      FS.syncfs(true,start);
+    }catch(error){start(error);}
   }],
 };
 const engine=document.createElement('script');engine.src=new URL('./jotta-text.js',import.meta.url).href;

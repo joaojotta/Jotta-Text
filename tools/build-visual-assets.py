@@ -50,7 +50,7 @@ class Stroke(BasePen):
         self.finish()
     def _endPath(self):self.finish()
     def finish(self):
-        for a,b in zip(self.points,self.points[1:]):
+        for a,b in zip(self.points,self.points[1:],strict=False):
             dx,dy=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dy)
             if not length:continue
             nx,ny=-dy/length*self.radius,dx/length*self.radius
@@ -72,7 +72,7 @@ def draw_element(element,pen,root):
             x,y,w,h=[float(element.get(k,'0')) for k in ['x','y','width','height']];points=[(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
         elif tag=='line':points=[(float(element.get('x1','0')),float(element.get('y1','0'))),(float(element.get('x2','0')),float(element.get('y2','0')))]
         else:
-            values=[float(x) for x in element.get('points','').replace(',',' ').split()];points=list(zip(values[::2],values[1::2]))
+            values=[float(x) for x in element.get('points','').replace(',',' ').split()];points=list(zip(values[::2],values[1::2],strict=False))
         if points:
             target.moveTo(points[0])
             for point in points[1:]:target.lineTo(point)
