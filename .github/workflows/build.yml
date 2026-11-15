@@ -251,37 +251,70 @@ jobs:
             dist/JottaText-*-web.zip.sha256
           if-no-files-found: error
 
-  # Publish a GitHub Release for v* tags once every package has been built and tested.
+  # Publish a GitHub Release with every package whenever a successful push to
+  # main (or a v* tag) carries a VERSION that has no release yet. The release
+  # creates its own v<VERSION> tag, so no manual tagging is needed.
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [version, lint, appimage, flatpak, windows, web]
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     permissions:
       contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v${{ needs.version.outputs.version }}
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+      - name: Decide whether this VERSION needs a release
+        id: decide
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Bump VERSION to publish a new release."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # An existing tag must point at this commit; otherwise the packages would
+          # not match the tagged source.
+          # Prefer the peeled commit (^{}) of an annotated tag over the tag object.
+          peeled="$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)"
+          plain="$(git ls-remote origin "refs/tags/$TAG" | cut -f1)"
+          tagged="${peeled:-$plain}"
+          if [[ -n "$tagged" && "$tagged" != "$GITHUB_SHA" ]]; then
+            echo "::error::Tag $TAG already points at $tagged, not $GITHUB_SHA. Bump VERSION to release this commit."
+            exit 1
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v7
+        if: steps.decide.outputs.publish == 'true'
         with:
           path: dist/release
+          pattern: JottaText-${{ needs.version.outputs.version }}-*
           merge-multiple: true
       - name: Verify package checksums
+        if: steps.decide.outputs.publish == 'true'
         working-directory: dist/release
-        run: sha256sum --check --strict *.sha256
+        run: |
+          ls -l
+          [[ "$(ls *.sha256 | wc -l)" -eq 4 ]] || { echo '::error::Expected four packages with checksums'; exit 1; }
+          sha256sum --check --strict *.sha256
       - name: Extract release notes from CHANGELOG.md
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
+        if: steps.decide.outputs.publish == 'true'
         run: |
           awk -v heading="## Jotta Text v$VERSION " '
             index($0, heading) == 1 { found = 1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > dist/release-notes.md
-          [[ -s dist/release-notes.md ]] || { echo "CHANGELOG.md has no entry for v$VERSION"; exit 1; }
+          [[ -s dist/release-notes.md ]] || { echo "::error::CHANGELOG.md has no entry for v$VERSION"; exit 1; }
       - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.version.outputs.version }}
+        if: steps.decide.outputs.publish == 'true'
         run: |
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Jotta Text v$VERSION" \
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "Jotta Text v$VERSION" \
             --notes-file dist/release-notes.md dist/release/*

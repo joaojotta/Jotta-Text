@@ -1,5 +1,18 @@
 # Changelog
 
+## Jotta Text v0.6.2 — 2026-11-15
+
+- Publish a GitHub Release automatically when a push to `main` passes every
+  build and test and `VERSION` has no release yet; the release job creates the
+  version tag itself. See PUBLISHING.md.
+- Write the Windows (and every other) checksum file with LF line endings. The
+  Windows `.sha256` ended in CRLF, so `sha256sum -c` could not find the ZIP and
+  the v0.6.1 release was not published.
+- Includes the unreleased v0.6.1 changes: the web edition ships `.js` modules
+  that any web server runs, reports startup problems on the page and is tested
+  in Firefox; checksum files name only the package; the Flatpak bundle is named
+  `JottaText-<version>-x86_64.flatpak`.
+
 ## Jotta Text v0.6.1 — 2026-11-15
 
 - Web: report startup problems on the page instead of staying on "Loading Jotta

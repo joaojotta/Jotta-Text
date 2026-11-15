@@ -39,5 +39,6 @@ with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as zipped
     for path in sorted(out.rglob('*')):
         if path.is_file():zipped.write(path,path.relative_to(out.parent))
 with archive.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
-Path(str(archive)+'.sha256').write_text(f'{digest}  {archive.name}\n')
+# LF on every platform: sha256sum --check reads a CR as part of the filename.
+Path(str(archive)+'.sha256').write_text(f'{digest}  {archive.name}\n',newline='\n')
 print(f'Packaged {archive.name} with {len(visited)} checked PE dependency trees')

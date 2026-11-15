@@ -17,5 +17,6 @@ with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as zipped
     for path in sorted((ROOT/'dist/web').rglob('*')):
         if path.is_file():zipped.write(path,path.relative_to(ROOT/'dist/web'))
 with archive.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
-Path(str(archive)+'.sha256').write_text(f'{digest}  {archive.name}\n')
+# LF on every platform: sha256sum --check reads a CR as part of the filename.
+Path(str(archive)+'.sha256').write_text(f'{digest}  {archive.name}\n',newline='\n')
 print(f'Built {archive.name}')

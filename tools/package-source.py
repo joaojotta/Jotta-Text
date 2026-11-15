@@ -36,7 +36,7 @@ def main():
             zipped.write(path, Path(stem) / path.relative_to(ROOT))
     with archive.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-    Path(str(archive) + '.sha256').write_text(f'{digest}  {archive.name}\n')
+    Path(str(archive) + '.sha256').write_text(f'{digest}  {archive.name}\n', newline='\n')
     print(f'Packaged {archive.relative_to(ROOT)} ({len(paths)} source files)')
 
 if __name__ == '__main__':

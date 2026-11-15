@@ -18,6 +18,8 @@ version=(ROOT/'VERSION').read_text().strip()
 archive=ROOT/f'dist/JottaText-{version}-windows-x64-portable.zip'
 with archive.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
 assert digest==Path(str(archive)+'.sha256').read_text().split()[0]
+checksum=Path(str(archive)+'.sha256').read_bytes()
+assert checksum==f'{digest}  {archive.name}\n'.encode(),('checksum file must be one LF-terminated line',checksum)
 with tempfile.TemporaryDirectory(prefix='Jotta portátil test ') as directory:
     temp=Path(directory)
     with zipfile.ZipFile(archive) as zipped:zipped.extractall(temp)
