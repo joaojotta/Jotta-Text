@@ -28,8 +28,9 @@ author, signing and hook settings are retained. A matching SSH origin is changed
 to HTTPS so it can use the browser login; a different origin is never replaced.
 
 For an existing source folder, select an empty GitHub repository. An empty local
-folder can instead download an existing repository. Connecting a populated folder
-to an unrelated populated repository stops without overwriting its files.
+folder can instead download an existing repository. Unrelated populated local
+and remote repositories require history reconciliation; sync stops rather than
+overwriting either history.
 
 Sync stages, commits and pushes all saved changes that Git tracks, respecting
 `.gitignore`. It uses your message from Changes if provided, otherwise “Update
@@ -123,10 +124,12 @@ The actual editor test checks the opt-in switch, keyboard/mouse input, Portugues
 labels, commit/diff behavior, unsaved buffer isolation, disabling and restart.
 Public HTTPS cloning was also checked against GitHub's `octocat/Hello-World`
 repository, including the Flatpak transport. Authenticated GitHub pushes have
-not been performed as part of these tests.
+not been performed as part of these tests. The real GitHub device-code flow and
+cancellation were also verified inside Flatpak, stopping before authorization.
 
 The implementation is isolated in `profile/litefront/github/`, its small
-`profile/plugins/litefront_github.lua` entry point and `tools/github-trial.mjs`.
+`profile/plugins/litefront_github.lua` entry point, `tools/github-trial.mjs` and
+`tools/github-setup.mjs`.
 The remaining integration points are the General setting, Tools menu entry,
 bundle-copy line, URL-opening helper mode and Flatpak Git installer. No Lite XL
 engine changes are needed. These can be removed together if the trial is not
