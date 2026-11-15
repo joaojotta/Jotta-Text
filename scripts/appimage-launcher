@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+JOTTA_TEXT_APPDIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$JOTTA_TEXT_APPDIR/usr/bin/jotta-text" "$@"

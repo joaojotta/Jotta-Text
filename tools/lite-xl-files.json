@@ -1,0 +1,97 @@
+{
+  "commit": "f1ab7de4ea1b4951b49ca5b817726a470ad43da7",
+  "files": {
+    "data/core/commands/findreplace.lua": {
+      "before": "64580f54c2ce4ed1d466f8ef223f9c79afb19c376faebab6d3da18ed50707e84",
+      "after": "1d95bf78be1014f4f022703d4f908ad030d0b1e144022d01d57122080a53628a"
+    },
+    "data/core/contextmenu.lua": {
+      "before": "0234b4ac6e600cf6095f4331839326c8191e49ca08424e5cdba1c4aa7e3af411",
+      "after": "eb130144a59e5f9629388af3be26a764d8eacf5f317adbed3cdfee816f9f7149"
+    },
+    "data/core/init.lua": {
+      "before": "34fdf245c3fbc9b2ea76e4ec07643206e0afcacb2bcc7ef0e05c0cbfde328b70",
+      "after": "dc7c1e6436613defd0cf33825888620d63bbf6f193d5aa2618badcdbbb0d5865"
+    },
+    "data/plugins/projectsearch.lua": {
+      "before": "c27d52b17243e64a9493f9d87cdfaa3b5a51fdbd10c20b5326ba3c331873cba6",
+      "after": "50f4d071dd35d5041e68e49843778d7e6d2c7deff54ab22bc8909be56bb92275"
+    },
+    "docs/api/renderer.lua": {
+      "before": "cad177b142c671248ea33813831c5ea646930c0cef8a6d3c4acadb8ba7c3885a",
+      "after": "8faeb5a18d8ee2433f030d4dfe9c07bafce78cce338fc287abe92b975cd853e1"
+    },
+    "meson.build": {
+      "before": "a8617dfc77184b518a955ed873a43abdabd595b7a173d7490c2a78f1a9924319",
+      "after": "ac789fb5217bc2df06320fbd94864268c9ed8edcfd084b74c13c1581e06afeac"
+    },
+    "src/api/api.c": {
+      "before": "4f24639cf47e1db5f5d36d51d4ce409587861479d6799b7996fcef42805a8cd9",
+      "after": "718b1fd89441ac8480ee0784479d7a2d9ac36469346051eaf59c1363f538a19a"
+    },
+    "src/api/dirmonitor.c": {
+      "before": "cb761f9ac30a6781995564f14a1518030901f3560495bad9a27ddf1b710b5c2c",
+      "after": "b198d80f4de0a7bf4358c795157afe1e18a04ae0434a21833d620dc1d8f2e3a7"
+    },
+    "src/api/renderer.c": {
+      "before": "6c97359d5cac7ef7a15b478ee9392105c6bd9b3ed35193e9a86d64993ef3fa89",
+      "after": "3d912b1ec5132cdebb3d0dae0f23803aed2cb8f1fa9f25199737feceb824cf42"
+    },
+    "src/api/system.c": {
+      "before": "ab0f342633b91096ae976ffbd026d1ac99820c3209cb583d8445f1bab622a869",
+      "after": "e7fef7f246ba3aebb5edf7c60a16d769e0c98adbf6399a7b181559afd83e3a7e"
+    },
+    "src/api/web-process.c": {
+      "before": null,
+      "after": "343f26da0f1694c347b6e540b5f82fc03cb381efc2d01856518620b0d40d7f88"
+    },
+    "src/api/web.c": {
+      "before": null,
+      "after": "0b382b43c7b36724a25e73c760202635b31ecce77e15113e9d6c8b5b6d08cdf0"
+    },
+    "src/image.c": {
+      "before": null,
+      "after": "2d1bf49a73cfb36aacd78cd77d881184873b8d222079fbacd31a54f47dd47448"
+    },
+    "src/image.h": {
+      "before": null,
+      "after": "40bad018a6601f15bd62c6aafc040cc6d78eeb7a3e2201f6f4da8877790b6562"
+    },
+    "src/main.c": {
+      "before": "bed9533f97b38ecd3f7bb755546e28fbeeb4ff633b94efddd91aed24e1240295",
+      "after": "a5733e24f0b8bb95702672d38139ca18660fcc0904a387547e5b1196ddd4e472"
+    },
+    "src/meson.build": {
+      "before": "bc6312536ed9eb998cf60de0ec79f6ac463dbd15e9d924cb29fb54e8d95d94a2",
+      "after": "0cc4c9e060b4bc0e25e114f79df42aac347d8781214ec796aef98493acfd992a"
+    },
+    "src/rencache.c": {
+      "before": "377b0f3b770630dd6cd1770c1d8ef3baf7453098b51287bd8a4ad5665e76658a",
+      "after": "6ea61a94c9749d05fef62f81629cea6c5715529f4db4a0528c49115db3c0952e"
+    },
+    "src/rencache.h": {
+      "before": "6fa930d102f44266ddbad855a8ff57104d9896bbf2c02109a850e81db8a2420e",
+      "after": "820875d582ed4142d79959c9c8650a18bb2884b0d1cde98d4e6a31053d38b9e0"
+    },
+    "src/renderer.c": {
+      "before": "c79beef6634e376ce21f3df527d2e19054c9a3386bcd18d6a6cb5296fd600435",
+      "after": "5bc570f679999084d74bd8dfbcb8117d956ba4bb15180bb3c861fad3b2028392"
+    },
+    "src/renderer.h": {
+      "before": "35216f20833d7ef9ffb34dac4434d0ef80cb6218b5b2220a26cd798a8c736884",
+      "after": "5aec91c25eefc5d931bd75894cabb2a0852e2e074e67257742cd752f59fcb482"
+    },
+    "src/rounded_rect.c": {
+      "before": null,
+      "after": "240a47f159845697b55896d7dbd7fbcc380d8a4ce520eada4b3095ade3ccde8d"
+    },
+    "src/thirdparty/stb-LICENSE": {
+      "before": null,
+      "after": "eb36e45c704dd0b59730115523e089b051852625b4db0a6fe76c991900af20e7"
+    },
+    "src/thirdparty/stb_image.h": {
+      "before": null,
+      "after": "deb4f18c9ca21b751a1323019031c94c0bf5ca1d2929ef5913cc56f00aab6e91"
+    }
+  }
+}

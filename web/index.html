@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jotta Text Web</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body>
+  <header>
+    <img src="assets/icon.svg" alt="Jotta Text" width="28" height="28">
+    <button id="open-file" disabled>Open file</button>
+    <button id="open-folder" disabled>Import folder</button>
+    <button id="download" disabled>Download file</button>
+    <button id="preview" disabled>Live preview</button>
+    <button id="settings" disabled>Settings</button>
+    <span id="status" role="status">Loading Jotta Text…</span>
+  </header>
+  <main>
+    <canvas id="canvas" tabindex="0" aria-label="Jotta Text code editor" oncontextmenu="event.preventDefault()"></canvas>
+    <section id="preview-panel" hidden aria-label="Live preview">
+      <div><strong>Live preview</strong><button id="close-preview" aria-label="Close preview">×</button></div>
+      <iframe id="preview-frame" title="Document preview" sandbox="allow-scripts allow-modals"></iframe>
+    </section>
+  </main>
+  <input type="file" id="file-picker" hidden multiple>
+  <input type="file" id="folder-picker" hidden multiple webkitdirectory>
+  <dialog id="save-dialog">
+    <form method="dialog"><h2>Download file</h2><label>Filename<input name="filename" required autocomplete="off"></label>
+    <p>Your workspace copy stays in this browser. The download saves a separate copy to your device.</p>
+    <div><button value="cancel" formnovalidate>Cancel</button><button value="save">Download</button></div></form>
+  </dialog>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

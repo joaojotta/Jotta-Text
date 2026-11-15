@@ -1,0 +1,8 @@
+{
+  "version": "2.83.1",
+  "archives": {
+    "linux-x64": {"name": "gh_2.83.1_linux_amd64.tar.gz", "sha256": "1c5252d4ce3db07b51c01ff0b909583da6364ff3fdc06d0c2e75e62dc0380a34"},
+    "linux-arm64": {"name": "gh_2.83.1_linux_arm64.tar.gz", "sha256": "36af472f8e96fd67253f813f71d9610624cc4e3c7a5b148459e42ffa1a933f64"},
+    "windows-x64": {"name": "gh_2.83.1_windows_amd64.zip", "sha256": "1324871424cb8cb3793914565026a8da53b1a633fa05760597abef54b57ff12e"}
+  }
+}

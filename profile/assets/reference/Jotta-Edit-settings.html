@@ -1,0 +1,128 @@
+  <div id="settings-overlay" class="jotta-modal-overlay modal-center hidden" aria-hidden="true">
+    <section class="settings-dialog" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div id="settings-drag-handle" class="modal-header settings-drag-handle"><div><h2 id="settings-title">Preferences</h2><p>Editor and window settings</p></div><button id="settings-close" class="modal-close" aria-label="Close settings">×</button></div>
+      <div id="settings-tabs" class="settings-tabs" role="tablist" aria-label="Preferences sections">
+        <button type="button" id="settings-tab-editor" class="settings-tab" role="tab" aria-controls="settings-pane-editor" aria-selected="true" tabindex="0" data-settings-tab="editor">Editor</button>
+        <button type="button" id="settings-tab-themes" class="settings-tab" role="tab" aria-controls="settings-pane-themes" aria-selected="false" tabindex="-1" data-settings-tab="themes">Themes</button>
+        <button type="button" id="settings-tab-theme-editor" class="settings-tab" role="tab" aria-controls="settings-pane-theme-editor" aria-selected="false" tabindex="-1" data-settings-tab="theme-editor">Theme Editor</button>
+        <button type="button" id="settings-tab-explorer" class="settings-tab" role="tab" aria-controls="settings-pane-explorer" aria-selected="false" tabindex="-1" data-settings-tab="explorer">Explorer</button>
+        <button type="button" id="settings-tab-language-servers" class="settings-tab" role="tab" aria-controls="settings-pane-language-servers" aria-selected="false" tabindex="-1" data-settings-tab="language-servers">Language servers</button>
+        <button type="button" id="settings-tab-shortcuts" class="settings-tab" role="tab" aria-controls="settings-pane-shortcuts" aria-selected="false" tabindex="-1" data-settings-tab="shortcuts">Shortcuts</button>
+        <button type="button" id="settings-tab-general" class="settings-tab" role="tab" aria-controls="settings-pane-general" aria-selected="false" tabindex="-1" data-settings-tab="general">General</button>
+      </div>
+      <div class="settings-fields">
+        <div id="settings-pane-editor" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-editor" tabindex="0">
+        <label>Editor font <span class="jotta-font-combo"><input id="setting-font" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="font-menu" spellcheck="false" autocomplete="off" placeholder="Choose or type a font" maxlength="65"><button id="font-toggle" type="button" aria-label="Show installed fonts" title="Show installed fonts">⌄</button></span></label>
+        <label>Interface font <span class="jotta-font-combo"><input id="setting-ui-font" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ui-font-menu" autocomplete="off" spellcheck="false" placeholder="Choose a system font" maxlength="65"><button id="ui-font-toggle" type="button" aria-label="Show installed fonts" title="Show installed fonts">⌄</button></span></label>
+        <div class="settings-two"><label>Editor font size <input id="setting-size" type="number" min="10" max="72" step="1"></label>
+        <label>UI font size <input id="setting-ui-size" type="number" min="11" max="32" step="1" title="Interface size; editor font size is separate"></label></div>
+        <label>Line spacing <select id="setting-leading"><option value="1.35">Compact</option><option value="1.55">Comfortable</option><option value="1.75">Spacious</option></select></label>
+        <section class="project-settings"><label class="setting-check"><input id="setting-project-settings" type="checkbox"> Use project-specific editor settings</label><p id="setting-project-path"></p><p>Applies to indentation, tab width, word wrap and formatting in this workspace. Themes and interface preferences stay global. Turn off to use global defaults.</p></section>
+        <div class="settings-two"><label>Indentation <select id="setting-indent"><option value="spaces">Spaces</option><option value="tabs">Tabs</option></select></label>
+        <label>Tab width <select id="setting-tab-size"><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label></div>
+        <label class="setting-check"><input id="setting-word-wrap" type="checkbox"> Word wrap (fit to editor width)</label>
+        <label>Colour display
+          <select id="setting-color-display" aria-label="Colour display">
+            <option value="swatch">Colour square before value (default)</option>
+            <option value="background">Colour value background</option>
+          </select>
+        </label>
+        <label>Plain Text matching words
+          <select id="setting-plaintext-highlights" aria-label="Plain Text matching words">
+            <option value="selection">Only when a word is selected</option>
+            <option value="cursor">When cursor is inside a word</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label>Formatting line width
+          <select id="setting-format-width" aria-label="Formatting line width">
+            <option value="none">No preferred limit (default)</option>
+            <option value="80">80 columns</option>
+            <option value="100">100 columns</option>
+            <option value="120">120 columns</option>
+          </select>
+        </label>
+        <label class="setting-check"><input id="setting-format-save" type="checkbox"> Format document when saving</label>
+        </div>
+        <div id="settings-pane-themes" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-themes" tabindex="0" hidden>
+        <label>Code syntax theme <select id="setting-syntax-theme" aria-label="Code syntax theme"></select></label>
+        <div id="setting-syntax-preview" class="syntax-theme-preview" aria-label="Syntax colour preview" role="img">
+          <code><span data-token="keyword">const</span> <span data-token="variable">greeting</span> <span data-token="operator">=</span> <span data-token="string">"Hello"</span><span data-token="operator">;</span> <span data-token="comment">// preview</span></code>
+          <code><span data-token="function">print</span>(<span data-token="variable">greeting</span>, <span data-token="number">42</span>);</code>
+          <code>&lt;<span data-token="tag">div</span> <span data-token="attribute">class</span>=<span data-token="string">"demo"</span>&gt;…&lt;/<span data-token="tag">div</span>&gt;</code>
+        </div>
+        </div>
+        <div id="settings-pane-theme-editor" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-theme-editor" tabindex="0" hidden>
+        <section id="custom-theme-editor" class="custom-theme-editor" aria-labelledby="custom-theme-heading">
+          <div class="theme-editor-heading">
+            <div><h3 id="custom-theme-heading">Theme editor</h3>
+              <p>Create editable copies of built-in syntax themes. Built-in themes remain unchanged.</p></div>
+            <button id="theme-duplicate" type="button">Duplicate selected</button>
+          </div>
+          <div id="theme-editor-fields" class="theme-editor-fields" hidden>
+            <div class="theme-editor-meta">
+              <label>Theme name <input id="theme-custom-name" type="text" maxlength="64" spellcheck="false"></label>
+              <label>Appearance <select id="theme-custom-mode"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+            </div>
+            <div id="theme-colour-grid" class="theme-colour-grid" aria-label="Theme colour settings"></div>
+            <div class="theme-editor-actions">
+              <button id="theme-reset" type="button">Reset colours to original</button>
+              <button id="theme-export" type="button">Export JSON</button>
+              <button id="theme-delete" type="button" class="theme-delete-button">Delete theme</button>
+            </div>
+            <p id="theme-delete-confirm" class="theme-delete-confirm" hidden>
+              Delete this custom theme?
+              <button id="theme-delete-yes" type="button">Delete permanently</button>
+              <button id="theme-delete-no" type="button">Cancel</button>
+            </p>
+          </div>
+          <div class="theme-import-row">
+            <button id="theme-import" type="button">Import theme JSON…</button>
+            <input id="theme-import-file" type="file" accept=".json,application/json" hidden>
+            <span id="theme-editor-status" role="status" aria-live="polite"></span>
+          </div>
+        </section>
+        <section class="custom-theme-editor" aria-labelledby="interface-theme-heading">
+          <div class="theme-editor-heading">
+            <div><h3 id="interface-theme-heading">Interface colours</h3>
+              <p>Customise the current light or dark interface independently of syntax themes.</p></div>
+            <button type="button" id="theme-ui-reset">Reset interface</button>
+          </div>
+          <p id="theme-ui-mode-note" class="theme-ui-mode-note"></p>
+          <div id="theme-ui-colours" class="theme-colour-grid" aria-label="Interface colour settings"></div>
+        </section>
+        </div>
+        <div id="settings-pane-explorer" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-explorer" tabindex="0" hidden>
+        <label class="setting-check"><input id="setting-hidden-files" type="checkbox"> Show hidden files in Explorer</label>
+        <label class="setting-check"><input id="setting-auto-refresh" type="checkbox"> Automatically refresh folders and clean files</label>
+        <div class="icon-colour-settings">
+          <label>Explorer icon palette <select id="setting-icon-palette" aria-label="Explorer icon palette"></select></label>
+          <div id="setting-icon-palette-preview" class="icon-palette-preview" aria-label="Icon palette preview" role="img"></div>
+          <label>Explorer icon colours <select id="setting-icon-type" aria-label="Explorer icon type"></select></label>
+          <div class="icon-colour-actions"><span id="setting-icon-preview" aria-hidden="true"></span><button id="setting-icon-colour" type="button">Choose colour…</button><button id="setting-icon-reset" type="button">Automatic</button><span id="setting-icon-colour-value" class="icon-colour-value" aria-live="polite"></span></div>
+          <p class="icon-colour-note">Automatic colours follow the code syntax theme. Individual icon colours override the selected palette; Automatic resets that icon to its palette default.</p>
+        </div>
+        </div>
+        <div id="settings-pane-language-servers" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-language-servers" tabindex="0"></div>
+        <div id="settings-pane-shortcuts" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-shortcuts" tabindex="0" hidden></div>
+        <div id="settings-pane-general" class="settings-pane" role="tabpanel" aria-labelledby="settings-tab-general" tabindex="0" hidden>
+        <label>Live preview browser <span class="preview-browser-choice"><img id="preview-browser-icon" class="button-icon" src="/ui-icons/default-browser.svg" alt="" aria-hidden="true" draggable="false"><select id="setting-preview-browser"><option value="default">System default</option><option value="firefox">Firefox</option><option value="chrome">Chrome</option></select></span></label>
+        <label>Window decoration <select id="setting-frame"><option value="native">System window frame (KDE/GNOME)</option><option value="custom">Jotta Edit custom frame</option></select></label>
+        <label>Language <select id="setting-language"><option value="system">System default</option><option value="pt-PT">Português (Portugal)</option><option value="en">English</option></select></label>
+        <p id="frame-note" class="settings-note hidden">Restart Jotta Edit to apply your window decoration change.</p>
+        <section class="custom-theme-editor settings-transfer" aria-labelledby="settings-transfer-heading">
+          <div class="theme-editor-heading"><div><h3 id="settings-transfer-heading">Settings export and import</h3><p>Move themes, colours, fonts and global editor preferences between devices.</p></div></div>
+          <p class="settings-transfer-note">Credentials, server favourites, workspace paths and open documents are excluded. Project-specific settings stay on this device.</p>
+          <div class="settings-transfer-actions"><button id="settings-export" type="button">Export settings…</button><button id="settings-import" type="button">Import settings…</button><input id="settings-import-file" type="file" accept=".json,application/json" hidden></div>
+          <div id="settings-import-review" class="settings-import-review" hidden>
+            <p id="settings-import-summary"></p>
+            <p>Import replaces the included global settings and colour collections. Open documents and project-specific settings are preserved.</p>
+            <div class="settings-transfer-actions"><button id="settings-import-apply" type="button" class="primary">Apply imported settings</button><button id="settings-import-cancel" type="button">Cancel import</button></div>
+          </div>
+          <p id="settings-transfer-status" role="status" aria-live="polite"></p>
+        </section>
+        </div>
+      </div>
+      <div class="modal-actions"><button id="settings-restart" class="primary hidden">Restart to apply</button><button id="settings-done" class="primary">Done</button></div>
+    </section>
+  </div>

@@ -1,0 +1,60 @@
+{
+  "app-id": "io.github.joaojotta.JottaText",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "sdk": "org.freedesktop.Sdk",
+  "command": "jotta-text",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--share=network",
+    "--filesystem=home"
+  ],
+  "modules": [
+    {
+      "name": "lite-xl",
+      "buildsystem": "meson",
+      "build-options": {
+        "env": {
+          "CFLAGS": "-O2"
+        }
+      },
+      "config-opts": [
+        "--buildtype=release",
+        "-Dportable=false",
+        "--wrap-mode=nodownload"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../vendor/lite-xl"
+        }
+      ]
+    },
+    {
+      "name": "jotta-text",
+      "buildsystem": "simple",
+      "build-commands": [
+        "bash scripts/install-flatpak-git.sh",
+        "install -Dm755 scripts/flatpak-launcher /app/bin/jotta-text",
+        "install -Dm755 scripts/migrate-flatpak-settings.sh /app/bin/jotta-text-migrate-settings",
+        "ln -s jotta-text /app/bin/litefront",
+        "ln -s jotta-text /app/bin/jottaxl",
+        "cp -a app-data/. /app/share/lite-xl/",
+        "rm -f /app/share/applications/org.lite_xl.lite_xl.desktop /app/share/metainfo/org.lite_xl.lite_xl.appdata.xml",
+        "cc -O2 -Wall -Wextra tools/native/file-dialog.c -o /app/bin/litefront-file-dialog $(pkg-config --cflags --libs gio-2.0)",
+        "install -Dm644 flatpak/io.github.joaojotta.JottaText.desktop /app/share/applications/io.github.joaojotta.JottaText.desktop",
+        "install -Dm644 flatpak/io.github.joaojotta.JottaText.svg /app/share/icons/hicolor/scalable/apps/io.github.joaojotta.JottaText.svg",
+        "for size in 32 48 64 128 256 512; do install -Dm644 profile/assets/app-icons/jotta-text-$size.png /app/share/icons/hicolor/${size}x${size}/apps/io.github.joaojotta.JottaText.png; done"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../dist/jotta-text-stage"
+        }
+      ]
+    }
+  ]
+}

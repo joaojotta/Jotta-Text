@@ -1,0 +1,194 @@
+name: Build Jotta Text
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  version:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        shell: bash
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            [[ "${GITHUB_REF#refs/tags/v}" == "$version" ]] || { echo 'Tag must match VERSION'; exit 1; }
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Test settings migration after rename
+        run: python3 tests/test-flatpak-migration.py
+
+  appimage:
+    needs: version
+    # Build on the older supported runner to avoid inheriting Arch's glibc floor.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+      - name: Install native prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config librsvg2-bin libsdl2-dev libfreetype6-dev libharfbuzz-dev libpcre2-dev liblua5.4-dev libglib2.0-dev librsvg2-dev libwebp-dev libtiff-dev
+          python -m pip install meson==1.9.1 Pillow==12.0.0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            vendor/litefront/node
+            vendor/litefront/tooling/node_modules
+            vendor/litefront/features
+            vendor/litefront/libraries
+            vendor/litefront/sources
+            vendor/lite-xl/subprojects/packagecache
+            vendor/appimage-tools
+          key: appimage-${{ runner.os }}-${{ hashFiles('tools/dependencies.lock.json', 'tools/appimage-tools.lock.json', 'tools/lite-xl-files.json', 'vendor/litefront/tooling/package-lock.json') }}
+      - name: Build AppImage
+        run: bash scripts/build-appimage.sh
+      - name: Test packaged AppImage
+        run: python tests/test-appimage.py
+      - name: Test browser Lua adapters
+        run: python tests/test-browser-profile.py
+      - name: Test optional GitHub trial
+        run: |
+          node --test tests/test-github-trial.mjs
+          python tests/test-github-trial.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-AppImage-x86_64
+          path: |
+            dist/JottaText-*.AppImage
+            dist/JottaText-*.AppImage.sha256
+          if-no-files-found: error
+
+  flatpak:
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+      - name: Install build tools and Flatpak SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder ninja-build librsvg2-bin
+          python -m pip install meson==1.9.1 Pillow==12.0.0
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+      - name: Build Flatpak
+        run: bash scripts/build-flatpak.sh
+      - name: Test packaged session and editing features
+        run: |
+          dbus-run-session -- python tests/test-startup.py --flatpak-build dist/build
+          dbus-run-session -- python tests/test-workspace-session.py --flatpak-build dist/build
+          dbus-run-session -- python tests/test-editing.py --flatpak-build dist/build
+          dbus-run-session -- python tests/test-github-trial.py --flatpak-build dist/build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-Flatpak-x86_64
+          path: |
+            dist/JottaText.flatpak
+            dist/JottaText.flatpak.sha256
+          if-no-files-found: error
+
+  windows:
+    needs: version
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git patch
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-pillow
+            mingw-w64-ucrt-x86_64-nodejs
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-freetype
+            mingw-w64-ucrt-x86_64-harfbuzz
+            mingw-w64-ucrt-x86_64-pcre2
+            mingw-w64-ucrt-x86_64-librsvg
+            mingw-w64-ucrt-x86_64-libwebp
+            mingw-w64-ucrt-x86_64-libtiff
+      - name: Build portable Windows ZIP
+        run: bash scripts/build-windows.sh
+      - name: Test portable ZIP with MSYS2 removed from runtime PATH
+        run: python tests/test-windows.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-Windows-x64-portable
+          path: |
+            dist/JottaText-*-windows-x64-portable.zip
+            dist/JottaText-*-windows-x64-portable.zip.sha256
+          if-no-files-found: error
+
+  web:
+    needs: version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build librsvg2-bin
+          python -m pip install meson==1.9.1 Pillow==12.0.0
+      - uses: emscripten-core/setup-emsdk@v15
+        with:
+          version: '4.0.23'
+          actions-cache-folder: emsdk-cache
+      - name: Build WebAssembly browser edition
+        run: bash scripts/build-web.sh
+      - name: Test browser workers and file imports
+        run: node --test tests/test-web.mjs
+      - name: Install browser test tooling
+        run: |
+          npm install --prefix dist/browser-test --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          dist/browser-test/node_modules/.bin/playwright install --with-deps chromium
+      - name: Test the compiled editor in Chromium
+        run: node tests/test-web-browser.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-Web
+          path: |
+            dist/JottaText-*-web.zip
+            dist/JottaText-*-web.zip.sha256
+          if-no-files-found: error

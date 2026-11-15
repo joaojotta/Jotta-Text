@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+export SDL_VIDEO_X11_WMCLASS=io.github.joaojotta.JottaText
+export SDL_VIDEO_WAYLAND_WMCLASS=io.github.joaojotta.JottaText
+export SDL_APP_NAME='Jotta Text'
+APP_BIN="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+# Retain previous-version settings, recent files and project notes.
+export LITE_USERDIR="${XDG_CONFIG_HOME:-$HOME/.config}/litefront"
+export LITEFRONT_BUNDLED=1
+mkdir -p "$LITE_USERDIR"
+exec "$APP_BIN/lite-xl" "$@"

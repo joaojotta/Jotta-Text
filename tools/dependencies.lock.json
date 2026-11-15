@@ -1,0 +1,51 @@
+{
+  "repositories": [
+    {
+      "path": "features/lsp",
+      "url": "https://github.com/lite-xl/lite-xl-lsp.git",
+      "commit": "3302b1101db547adb9dd9accb44cc04c7808bc53"
+    },
+    {
+      "path": "libraries/widget",
+      "url": "https://github.com/lite-xl/lite-xl-widgets.git",
+      "commit": "dcf1c8c7087638b879d5c9c835686ccd79f963ec"
+    },
+    {
+      "path": "sources/LiteMark",
+      "url": "https://github.com/Quillwyrm/LiteMark.git",
+      "commit": "936e6875534bed6a5093a64774562d1cf812a805"
+    },
+    {
+      "path": "sources/languages",
+      "url": "https://github.com/lite-xl/lite-xl-plugins.git",
+      "commit": "6e4aa640d679decd67d2c0b677ede52ef70a7bf9"
+    },
+    {
+      "path": "sources/snippets",
+      "url": "https://github.com/vqns/lite-xl-snippets.git",
+      "commit": "87248a23c8ceb2507f46b3ca3689b32d35c9c709"
+    }
+  ],
+  "node_version": "24.11.1",
+  "node_archives": {
+    "x64": {
+      "url": "https://nodejs.org/dist/v24.11.1/node-v24.11.1-linux-x64.tar.xz",
+      "sha256": "60e3b0a8500819514aca603487c254298cd776de0698d3cd08f11dba5b8289a8"
+    },
+    "arm64": {
+      "url": "https://nodejs.org/dist/v24.11.1/node-v24.11.1-linux-arm64.tar.xz",
+      "sha256": "6b0863fb9f627bf4a6c5948dce1de4398174a2e05dbe717503d828e211ca01f0"
+    }
+  },
+  "bundled_image_decoder": {
+    "name": "stb_image",
+    "repository": "https://github.com/nothings/stb",
+    "commit": "9600522de53973336fa033a289858a4354cbb04c",
+    "path": "vendor/lite-xl/src/thirdparty/stb_image.h",
+    "sha256": "deb4f18c9ca21b751a1323019031c94c0bf5ca1d2929ef5913cc56f00aab6e91"
+  },
+  "windows_node": {
+    "url": "https://nodejs.org/dist/v24.11.1/node-v24.11.1-win-x64.zip",
+    "sha256": "5355ae6d7c49eddcfde7d34ac3486820600a831bf81dc3bdca5c8db6a9bb0e76"
+  }
+}

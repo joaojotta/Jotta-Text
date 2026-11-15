@@ -1,0 +1,25 @@
+dist/
+.agents/
+.codex/
+.aws/
+.env
+.env.*
+.flatpak-builder/
+emsdk-cache/
+**/__pycache__/
+vendor/appimage-tools/
+vendor/windows/
+vendor/emsdk/
+vendor/browser-tests/
+vendor/litefront/github-cli/
+vendor/litefront/github-cli-windows/
+vendor/lite-xl/
+vendor/litefront/node/
+vendor/litefront/node-windows/
+vendor/litefront/tooling/node_modules/
+vendor/litefront/features/
+vendor/litefront/libraries/
+vendor/litefront/sources/
+vendor/lite-xl/subprojects/*/
+!vendor/lite-xl/subprojects/packagefiles/
+# Engine changes live in tools/lite-xl.patch; keep the Node package lock in Git.
