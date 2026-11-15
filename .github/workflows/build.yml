@@ -139,6 +139,9 @@ jobs:
     needs: version
     runs-on: windows-2022
     timeout-minutes: 60
+    env:
+      # Read and write tool/test files as UTF-8 instead of the cp1252 locale default.
+      PYTHONUTF8: "1"
     defaults:
       run:
         shell: msys2 {0}

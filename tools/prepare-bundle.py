@@ -6,8 +6,14 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+UPSTREAM = ROOT / 'vendor/lite-xl'
 DEPS = ROOT / 'vendor/litefront'
 IGNORE = shutil.ignore_patterns('.git', '__pycache__', 'screenshots', 'node_modules')
+DESTINATION_NAMES = ('lite-xl', 'app-data', 'data')
+VERSION_PATTERN = r'\d+\.\d+(?:\.\d+)?'
+SAVE_SESSION = ("  local ok,err=require('litefront.session').save()\n"
+                "  if not ok then core.error('Could not preserve open documents: %s',err);return end\n")
+
 
 def copy(source, dest):
     source, dest = Path(source), Path(dest)
@@ -17,43 +23,99 @@ def copy(source, dest):
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest)
 
-def replace(path, before, after):
-    text = path.read_text()
-    if before not in text:
-        raise RuntimeError(f'Upstream source changed; expected patch missing in {path}')
-    path.write_text(text.replace(before, after))
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('destination', type=Path)
-    parser.add_argument('--target', choices=['linux','windows','web'], default='linux')
-    args = parser.parse_args()
-    data = args.destination.resolve()
-    if data.name not in ('lite-xl', 'app-data', 'data') or data == ROOT or ROOT in data.parents and data.relative_to(ROOT).parts[0] not in ('dist',):
+def read(path):
+    # Explicit UTF-8 bytes: Windows would otherwise decode as cp1252 and write CRLF.
+    return path.read_bytes().decode('utf-8')
+
+
+def write(path, text):
+    path.write_bytes(text.encode('utf-8'))
+
+
+class Source:
+    """One upstream file being patched. Every edit fails loudly if its anchor is gone."""
+
+    def __init__(self, path):
+        self.path = path
+        self.text = read(path)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, error_type, *_):
+        if error_type is None:
+            write(self.path, self.text)
+
+    def _missing(self, anchor):
+        return RuntimeError(f'Upstream source changed; expected patch anchor missing in {self.path}: {anchor[:60]!r}')
+
+    def replace(self, before, after, count=-1):
+        if before not in self.text:
+            raise self._missing(before)
+        self.text = self.text.replace(before, after, count)
+
+    def replace_span(self, begin_marker, end_marker, replacement, include_end=False):
+        """Replace everything from begin_marker up to (or through) the next end_marker."""
+        begin = self.text.find(begin_marker)
+        end = self.text.find(end_marker, begin) if begin >= 0 else -1
+        if end < 0:
+            raise self._missing(begin_marker if begin < 0 else end_marker)
+        if include_end:
+            end += len(end_marker)
+        self.text = self.text[:begin] + replacement + self.text[end:]
+
+    def substitute(self, pattern, replacement):
+        self.text, count = re.subn(pattern, replacement, self.text)
+        if not count:
+            raise self._missing(pattern)
+
+    def append(self, text):
+        self.text += text
+
+
+def replace(path, before, after):
+    with Source(path) as source:
+        source.replace(before, after)
+
+
+def check_destination(data):
+    inside_source = ROOT in data.parents
+    if (data.name not in DESTINATION_NAMES or data == ROOT
+            or (inside_source and data.relative_to(ROOT).parts[0] != 'dist')):
         raise SystemExit('Bundle destination must be inside dist/ or outside the source tree')
-    if data.exists():
-        shutil.rmtree(data)
-    copy(ROOT / 'vendor/lite-xl/data', data)
-    replace(data / 'core/start.lua', '@PROJECT_VERSION@', '2.1.7')
-    version=(ROOT / 'VERSION').read_text().strip()
-    if not re.fullmatch(r'\d+\.\d+(?:\.\d+)?',version):
+
+
+def application_version():
+    version = read(ROOT / 'VERSION').strip()
+    if not re.fullmatch(VERSION_PATTERN, version):
         raise RuntimeError('Invalid application version')
-    start=data / 'core/start.lua'
-    start.write_text(start.read_text()+f'\nAPP_NAME = \"Jotta Text\"\nAPP_VERSION = \"{version}\"\n')
-    # User directories store sessions only. Neither Lua nor native modules are searched there.
-    start = data / 'core/start.lua'
-    text = start.read_text()
-    text = text.replace("package.path = USERDIR .. '/?.lua;' .. package.path", '')
-    text = text.replace("package.path = USERDIR .. '/?/init.lua;' .. package.path", '')
-    begin = text.index('package.cpath =')
-    end = text.index('\npackage.native_plugins', begin)
-    text = text[:begin] + "package.cpath = DATADIR .. '/?.' .. suffix .. ';' .. DATADIR .. '/?/init.' .. suffix .. ';'\n" + text[end:]
-    start.write_text(text)
-    core = data / 'core/init.lua'
-    text = core.read_text()
-    begin = text.index('function core.load_user_directory()')
-    end = text.index('function core.remove_project_directory', begin)
-    text = text[:begin] + """function core.load_user_directory()
+    return version
+
+
+def engine_version():
+    match = re.search(r"^\s*version\s*:\s*'([^']+)'", read(UPSTREAM / 'meson.build'), re.MULTILINE)
+    if not match:
+        raise RuntimeError('Cannot read the Lite XL version from meson.build')
+    return match.group(1)
+
+
+def patch_start(data):
+    """Set identity and stop the engine searching user directories for Lua or native modules."""
+    with Source(data / 'core/start.lua') as start:
+        start.replace('@PROJECT_VERSION@', engine_version())
+        start.append(f'\nAPP_NAME = "Jotta Text"\nAPP_VERSION = "{application_version()}"\n')
+        start.replace("package.path = USERDIR .. '/?.lua;' .. package.path", '')
+        start.replace("package.path = USERDIR .. '/?/init.lua;' .. package.path", '')
+        start.replace_span('package.cpath =', '\npackage.native_plugins',
+                           "package.cpath = DATADIR .. '/?.' .. suffix .. ';' .. DATADIR .. '/?/init.' .. suffix .. ';'\n")
+
+
+def patch_core(data):
+    """Load only the built-in profile, start without a project and preserve sessions."""
+    with Source(data / 'core/init.lua') as core:
+        core.replace_span('function core.load_user_directory()', 'function core.remove_project_directory',
+                          """function core.load_user_directory()
   return core.try(function()
     common.mkdirp(USERDIR)
     dofile(DATADIR .. '/litefront/init.lua')
@@ -61,18 +123,18 @@ def main():
 end
 
 
-""" + text[end:]
-    begin = text.index('function core.load_project_module()')
-    end = text.index('function core.reload_module', begin)
-    text = text[:begin] + """function core.load_project_module()
+""")
+        core.replace_span('function core.load_project_module()', 'function core.reload_module',
+                          """function core.load_project_module()
   return true
 end
 
 
-""" + text[end:]
-    text = text.replace('ipairs {DATADIR, USERDIR}', 'ipairs {DATADIR}')
-    text = text.replace('and "Lite XL" or title .. " - Lite XL"', 'and "Jotta Text" or title .. " - Jotta Text"')
-    text = text.replace('  local project_dir = core.recent_projects[1] or "."', """  -- A plain application launch shows welcome without indexing cwd or recents.
+""")
+        core.replace('ipairs {DATADIR, USERDIR}', 'ipairs {DATADIR}')
+        core.replace('and "Lite XL" or title .. " - Lite XL"', 'and "Jotta Text" or title .. " - Jotta Text"')
+        core.replace('  local project_dir = core.recent_projects[1] or "."',
+                     """  -- A plain application launch shows welcome without indexing cwd or recents.
   core.litefront_no_project = true
   core.project_files = {}
   local project_dir = USERDIR .. '/empty-workspace'
@@ -82,42 +144,50 @@ end
   else
     assert(common.mkdirp(project_dir))
   end""")
-    text = text.replace('      project_dir_explicit = true',
-                        '      project_dir_explicit = true\n      core.litefront_no_project = false')
-    text = text.replace('    core.root_view:close_all_docviews()\n    reload_customizations()',
-                        '    core.litefront_no_project = false\n    core.root_view:close_all_docviews()\n    reload_customizations()')
-    text = text.replace('  core.add_project_directory(project_dir_abs)\n',
-                        '  if not core.litefront_no_project then core.add_project_directory(project_dir_abs) end\n')
-    begin = text.index('  -- We assume we have just a single project directory here.')
-    end = text.index('  for _, filename in ipairs(files) do', begin)
-    # add_project_directory already reports incomplete indexing; do not warn a second time.
-    text = text[:begin] + text[end:]
-    text = text.replace('    core.log("Opening project %q from directory %s", pname, pdir)', """    if core.litefront_no_project then
+        core.replace('      project_dir_explicit = true',
+                     '      project_dir_explicit = true\n      core.litefront_no_project = false')
+        core.replace('    core.root_view:close_all_docviews()\n    reload_customizations()',
+                     '    core.litefront_no_project = false\n    core.root_view:close_all_docviews()\n    reload_customizations()')
+        core.replace('  core.add_project_directory(project_dir_abs)\n',
+                     '  if not core.litefront_no_project then core.add_project_directory(project_dir_abs) end\n')
+        # add_project_directory already reports incomplete indexing; do not warn a second time.
+        core.replace_span('  -- We assume we have just a single project directory here.',
+                          '  for _, filename in ipairs(files) do', '')
+        core.replace('    core.log("Opening project %q from directory %s", pname, pdir)',
+                     """    if core.litefront_no_project then
       core.log_quiet('Jotta Text ready; open a file or folder.')
     else
       core.log("Opening project %q from directory %s", pname, pdir)
     end""")
-    # Restore after startup files; persist before shutdown without discarding buffers.
-    text = text.replace('function core.run()\n', "function core.run()\n  require('litefront.session').restore()\n  require('litefront.session').start_recovery()\n")
-    text = text.replace('function core.quit(force)\n', "function core.quit(force)\n  local ok,err=require('litefront.session').save()\n  if not ok then core.error('Could not preserve open documents: %s',err);return end\n  force=true\n")
-    text = text.replace('function core.restart()\n', "function core.restart()\n  local ok,err=require('litefront.session').save()\n  if not ok then core.error('Could not preserve open documents: %s',err);return end\n")
-    text = text.replace('quit_with_function(function() core.restart_request = true end)', 'quit_with_function(function() core.restart_request = true end, true)')
-    core.write_text(text)
-    # A delayed disk reload must re-check edits made since the reload was scheduled.
-    replace(data / 'plugins/autoreload.lua', '    reload_doc(doc)\n  end)',
-            '    if doc:is_dirty() then doc.deferred_reload = true else reload_doc(doc) end\n  end)')
+        # Restore after startup files; persist before shutdown without discarding buffers.
+        core.replace('function core.run()\n',
+                     "function core.run()\n  require('litefront.session').restore()\n"
+                     "  require('litefront.session').start_recovery()\n")
+        core.replace('function core.quit(force)\n', 'function core.quit(force)\n' + SAVE_SESSION + '  force=true\n')
+        core.replace('function core.restart()\n', 'function core.restart()\n' + SAVE_SESSION)
+        core.replace('quit_with_function(function() core.restart_request = true end)',
+                     'quit_with_function(function() core.restart_request = true end, true)')
+
+
+def copy_application(data):
     copy(ROOT / 'profile/litefront', data / 'litefront')
     copy(ROOT / 'profile/assets', data / 'litefront/assets')
     copy(ROOT / 'fonts', data / 'litefront/assets/fonts/supplied')
     copy(ROOT / 'profile/init.lua', data / 'litefront/init.lua')
     copy(ROOT / 'VERSION', data / 'litefront/VERSION')
     copy(ROOT / 'CHANGELOG.md', data / 'litefront/CHANGELOG.md')
-    replace(data / 'plugins/language_html.lua', 'files = { "%.html?$" },',
-            'files = { "%.[hH][tT][mM][lL]?$", "%.[xX][hH][tT][mM][lL]$" },')
-    replace(data / 'plugins/language_html.lua', 'type = "function"', 'type = "htmltag"')
-    replace(data / 'plugins/language_html.lua', 'type = "keyword"', 'type = "htmlattribute"')
     copy(ROOT / 'profile/colors', data / 'colors')
     copy(ROOT / 'profile/plugins', data / 'plugins')
+
+
+def patch_builtin_plugins(data):
+    # A delayed disk reload must re-check edits made since the reload was scheduled.
+    replace(data / 'plugins/autoreload.lua', '    reload_doc(doc)\n  end)',
+            '    if doc:is_dirty() then doc.deferred_reload = true else reload_doc(doc) end\n  end)')
+    with Source(data / 'plugins/language_html.lua') as html:
+        html.replace('files = { "%.html?$" },', 'files = { "%.[hH][tT][mM][lL]?$", "%.[xX][hH][tT][mM][lL]$" },')
+        html.replace('type = "function"', 'type = "htmltag"')
+        html.replace('type = "keyword"', 'type = "htmlattribute"')
     wrap_anchor = """local function get_line_col_from_index_and_x(docview, idx, x)
   local doc = docview.doc
   local line, col = get_idx_line_col(docview, idx)
@@ -130,6 +200,9 @@ end
   end""")
     replace(data / 'plugins/projectsearch.lua', 'local dv = core.root_view:open_doc(core.open_doc(res.file))',
             "local dv = require('plugins.litefront_media').open_text(res.file)")
+
+
+def copy_bundled_plugins(data):
     copy(DEPS / 'features/lsp', data / 'plugins/lsp')
     copy(DEPS / 'libraries/widget', data / 'libraries/widget')
     copy(DEPS / 'sources/LiteMark/litemark', data / 'plugins/litemark')
@@ -138,89 +211,99 @@ end
     for name in ['php', 'ts', 'json', 'jsx', 'tsx', 'sass', 'yaml', 'sh']:
         copy(DEPS / f'sources/languages/plugins/language_{name}.lua', data / f'plugins/language_{name}.lua')
     copy(DEPS / 'sources/languages/plugins/minimap.lua', data / 'plugins/minimap.lua')
-    replace(data / 'plugins/minimap.lua', 'function MiniMap:is_minimap_enabled()\n',
-            'function MiniMap:is_minimap_enabled()\n  if self.dv.size.x < 500 * SCALE then return false end\n')
-    # Reserve a small top inset for both rendering and pointer/drag geometry.
-    replace(data / 'plugins/minimap.lua',
-            '  if not self:is_minimap_enabled() then return MiniMap.super.set_size(self, x, y, w, h, scrollable) end\n',
-            '  if not self:is_minimap_enabled() then return MiniMap.super.set_size(self, x, y, w, h, scrollable) end\n'
-            '  local margin=math.min(6*SCALE,math.max(0,h))\n  y=y+margin\n  h=math.max(0,h-margin)\n')
-    replace(data / 'plugins/minimap.lua',
-            'renderer.draw_rect(x, y, w, self.dv.size.y, style.minimap_background or style.background)',
-            'renderer.draw_rect(x, y, w, math.max(0,self.dv.size.y-6*SCALE), style.minimap_background or style.background)')
-    replace(data / 'plugins/litemark/init.lua', 'USERDIR .. "/plugins/litemark"', 'DATADIR .. "/plugins/litemark"')
+
+
+def patch_minimap(data):
+    with Source(data / 'plugins/minimap.lua') as minimap:
+        minimap.replace('function MiniMap:is_minimap_enabled()\n',
+                        'function MiniMap:is_minimap_enabled()\n  if self.dv.size.x < 500 * SCALE then return false end\n')
+        # Reserve a small top inset for both rendering and pointer/drag geometry.
+        disabled = '  if not self:is_minimap_enabled() then return MiniMap.super.set_size(self, x, y, w, h, scrollable) end\n'
+        minimap.replace(disabled, disabled + '  local margin=math.min(6*SCALE,math.max(0,h))\n  y=y+margin\n  h=math.max(0,h-margin)\n')
+        minimap.replace('renderer.draw_rect(x, y, w, self.dv.size.y, style.minimap_background or style.background)',
+                        'renderer.draw_rect(x, y, w, math.max(0,self.dv.size.y-6*SCALE), style.minimap_background or style.background)')
+
+
+def patch_markdown(data):
     # Preview shares application colors/fonts and invalidates all cached appearance.
-    markdown_layout = data / 'plugins/litemark/mdlayout.lua'
-    code = markdown_layout.read_text()
-    begin = code.index('local NoteColors = {')
-    end = code.index('\n}\n', begin) + len('\n}')
-    code = code[:begin] + "local NoteColors = require('litefront.markdown_theme').colors" + code[end:]
-    begin = code.index('local function load_assets(config)')
-    end = code.index('-- SYNTAX HELPERS', begin)
-    code = code[:begin] + """local function load_assets(config)
+    with Source(data / 'plugins/litemark/mdlayout.lua') as layout:
+        layout.replace_span('local NoteColors = {', '\n}', "local NoteColors = require('litefront.markdown_theme').colors",
+                            include_end=True)
+        layout.replace_span('local function load_assets(config)', '-- SYNTAX HELPERS', """local function load_assets(config)
   local assets = require('litefront.markdown_theme').assets()
   for key, scale in pairs(SCALES) do L[key] = math.floor(assets.size * scale) end
   NoteFonts = assets.fonts
 end
 
-""" + code[end:]
-    code = code.replace('color = style.background2,', 'color = style.ui_background or style.background,')
-    code = code.replace('math.floor(config.plugins.litemark.fonts.size)', 'math.floor(NoteFonts.REGULAR:get_size())')
-    markdown_layout.write_text(code)
-    markdown_view = data / 'plugins/litemark/init.lua'
-    replace(markdown_view, 'local theme_changed = (self._layout_bg ~= style.background2)',
-            "local appearance = require('litefront.markdown_theme').signature()\n  local theme_changed = (self._layout_appearance ~= appearance)")
-    replace(markdown_view, 'self._layout_bg = style.background2', 'self._layout_appearance = appearance')
-    replace(markdown_view, 'self:draw_background(style.background2)', 'self:draw_background(style.ui_background or style.background)')
-    replace(markdown_view, 'local border_color = style.syntax["keyword"]', 'local border_color = style.divider')
-    # Project notes keep their autosave; Markdown preview renders the unsaved buffer.
-    replace(markdown_view, '  if editor.doc:is_dirty() then editor.doc:save() end\n',
-            '  if editor._litemark_kind == "project" and editor.doc.abs_filename and editor.doc:is_dirty() then\n'
-            '    editor.doc:save()\n  end\n')
-    # Preview any Markdown-syntax document (including untitled ones) and reuse an open preview.
-    replace(markdown_view, '    local active = core.active_view\n',
-            '    local active = require("litefront.visual").document_view()\n')
-    replace(markdown_view, '    local filename = active.doc.filename\n    if filename and filename:match("%.md$") then\n',
-            '    if active.doc.syntax and active.doc.syntax.name == "Markdown" then\n'
-            '      local existing\n'
-            '      walk_views(function(view)\n'
-            '        if view.doc == active.doc and view:is(NoteReadView) then existing=view;return true end\n'
-            '      end)\n'
-            '      if existing then core.set_active_view(existing);return end\n')
-    replace(markdown_view, '    and view.doc.filename\n    and view.doc.filename:match("%.md$")\n',
-            '    and view.doc.syntax\n    and view.doc.syntax.name == "Markdown"\n')
+""")
+        layout.replace('color = style.background2,', 'color = style.ui_background or style.background,')
+        layout.replace('math.floor(config.plugins.litemark.fonts.size)', 'math.floor(NoteFonts.REGULAR:get_size())')
+    with Source(data / 'plugins/litemark/init.lua') as view:
+        view.replace('USERDIR .. "/plugins/litemark"', 'DATADIR .. "/plugins/litemark"')
+        view.replace('local theme_changed = (self._layout_bg ~= style.background2)',
+                     "local appearance = require('litefront.markdown_theme').signature()\n"
+                     '  local theme_changed = (self._layout_appearance ~= appearance)')
+        view.replace('self._layout_bg = style.background2', 'self._layout_appearance = appearance')
+        view.replace('self:draw_background(style.background2)', 'self:draw_background(style.ui_background or style.background)')
+        view.replace('local border_color = style.syntax["keyword"]', 'local border_color = style.divider')
+        # Project notes keep their autosave; Markdown preview renders the unsaved buffer.
+        view.replace('  if editor.doc:is_dirty() then editor.doc:save() end\n',
+                     '  if editor._litemark_kind == "project" and editor.doc.abs_filename and editor.doc:is_dirty() then\n'
+                     '    editor.doc:save()\n  end\n')
+        # Preview any Markdown-syntax document (including untitled ones) and reuse an open preview.
+        view.replace('    local active = core.active_view\n',
+                     '    local active = require("litefront.visual").document_view()\n')
+        view.replace('    local filename = active.doc.filename\n    if filename and filename:match("%.md$") then\n',
+                     '    if active.doc.syntax and active.doc.syntax.name == "Markdown" then\n'
+                     '      local existing\n'
+                     '      walk_views(function(view)\n'
+                     '        if view.doc == active.doc and view:is(NoteReadView) then existing=view;return true end\n'
+                     '      end)\n'
+                     '      if existing then core.set_active_view(existing);return end\n')
+        view.replace('    and view.doc.filename\n    and view.doc.filename:match("%.md$")\n',
+                     '    and view.doc.syntax\n    and view.doc.syntax.name == "Markdown"\n')
+
+
+def patch_completion(data):
     replace(data / 'plugins/lsp/listbox.lua', ', style.background)', ', style.ui_background or style.background)')
-    replace(data / 'plugins/autocomplete.lua', ', style.background)', ', style.ui_background or style.background)')
-    replace(data / 'plugins/autocomplete.lua',
+    with Source(data / 'plugins/autocomplete.lua') as autocomplete:
+        autocomplete.replace(', style.background)', ', style.ui_background or style.background)')
+        autocomplete.replace(
             '  return doc:get_text(line1, col1, line2, col2)\nend\n\nlocal function get_active_view()',
-            "  return require('litefront.completion_context').partial(doc, line2, col2, doc:get_text(line1, col1, line2, col2))\nend\n\nlocal function get_active_view()")
-    lsp = data / 'plugins/lsp/init.lua'
-    replace(lsp, 'USERDIR .. "/plugins/lsp/fonts/symbols.ttf"', 'DATADIR .. "/plugins/lsp/fonts/symbols.ttf"')
-    # Separate LSP identities let untitled buffers keep their normal Save dialog.
-    code = lsp.read_text()
-    code = re.sub(r'\b((?:\w+\.)*(?:doc|docu)|self)\.filename\b', r'document_filename(\1)', code)
-    code = code.replace('doc.abs_filename', '(doc.abs_filename or doc.litefront_lsp_filename)')
-    code = code.replace('local LineWrapping\n', """local function document_filename(doc)
+            "  return require('litefront.completion_context').partial(doc, line2, col2, doc:get_text(line1, col1, line2, col2))\n"
+            'end\n\nlocal function get_active_view()')
+        autocomplete.replace('local filename = doc and doc.filename or ""',
+                             'local filename = doc and (doc.filename or doc.litefront_lsp_filename) or ""')
+
+
+def patch_lsp(data):
+    with Source(data / 'plugins/lsp/init.lua') as lsp:
+        lsp.replace('USERDIR .. "/plugins/lsp/fonts/symbols.ttf"', 'DATADIR .. "/plugins/lsp/fonts/symbols.ttf"')
+        # Separate LSP identities let untitled buffers keep their normal Save dialog.
+        lsp.substitute(r'\b((?:\w+\.)*(?:doc|docu)|self)\.filename\b', r'document_filename(\1)')
+        lsp.replace('local LineWrapping\n', """local function document_filename(doc)
   return doc.filename or doc.litefront_lsp_filename
 end
 local LineWrapping
 """)
-    code = code.replace('  if not file_info then\n',
-                        '  if not file_info and doc.litefront_lsp_filename then file_info = {size = #table.concat(doc.lines), type = "file"} end\n  if not file_info then\n', 1)
-    code = code.replace('      lsp.open_document(self)\n    end)\n  else',
-                        '      lsp.start_server(document_filename(self), core.project_dir)\n      lsp.open_document(self)\n    end)\n  else', 1)
-    lsp.write_text(code)
-    replace(lsp, 'if cline ~= line or cchar ~= col then',
-            'if core.active_view.doc ~= doc or cline ~= line or cchar ~= col then')
-    # Inline color swatches own the pointer: suppress LSP hover popups over them.
-    replace(lsp, '  if not av:extends(DocView) then return end\n',
-            "  if not av:extends(DocView) then return end\n  if require('litefront.color_inline').at(av,x,y) then return end\n")
-    replace(lsp, '        callback = function(server, response)\n          if response.result and response.result.contents then\n',
-            '        callback = function(server, response)\n'
-            '          if not in_tab and lsp.hover_position.color_suppressed then return end\n'
-            '          if response.result and response.result.contents then\n')
-    replace(lsp, '  root_view_on_mouse_moved(self, x, y, dx, dy)\n\n',
-            """  root_view_on_mouse_moved(self, x, y, dx, dy)
+        lsp.replace('  if not file_info then\n',
+                    '  if not file_info and doc.litefront_lsp_filename then'
+                    ' file_info = {size = #table.concat(doc.lines), type = "file"} end\n  if not file_info then\n', 1)
+        lsp.replace('      lsp.open_document(self)\n    end)\n  else',
+                    '      lsp.start_server(document_filename(self), core.project_dir)\n'
+                    '      lsp.open_document(self)\n    end)\n  else', 1)
+        lsp.replace('if cline ~= line or cchar ~= col then',
+                    'if core.active_view.doc ~= doc or cline ~= line or cchar ~= col then')
+        # Inline color swatches own the pointer: suppress LSP hover popups over them.
+        lsp.replace('  if not av:extends(DocView) then return end\n',
+                    "  if not av:extends(DocView) then return end\n"
+                    "  if require('litefront.color_inline').at(av,x,y) then return end\n")
+        lsp.replace('        callback = function(server, response)\n          if response.result and response.result.contents then\n',
+                    '        callback = function(server, response)\n'
+                    '          if not in_tab and lsp.hover_position.color_suppressed then return end\n'
+                    '          if response.result and response.result.contents then\n')
+        lsp.replace('  root_view_on_mouse_moved(self, x, y, dx, dy)\n\n',
+                    """  root_view_on_mouse_moved(self, x, y, dx, dy)
 
   local node=self.root_node:get_child_overlapping_point(x,y)
   local view=node and node.active_view
@@ -233,10 +316,10 @@ local LineWrapping
     return
   end
 """)
-    # A shared Emmet server can open a document before a newly started CSS/HTML
-    # server. Wait for each didOpen to be written, not just initialization: LSP
-    # notifications and requests have separate queues and can otherwise race.
-    replace(lsp, 'function lsp.open_document(doc)\n', """local function mark_document_open(doc, server, path)
+        # A shared Emmet server can open a document before a newly started CSS/HTML
+        # server. Wait for each didOpen to be written, not just initialization: LSP
+        # notifications and requests have separate queues and can otherwise race.
+        lsp.replace('function lsp.open_document(doc)\n', """local function mark_document_open(doc, server, path)
   local filename = document_filename(doc)
   if not filename or core.project_absolute_path(filename) ~= path then return end
   doc.lsp_open = true
@@ -246,47 +329,75 @@ end
 
 function lsp.open_document(doc)
 """)
-    replace(lsp, 'callback = function() doc.lsp_open = true end',
-            'callback = function(server) mark_document_open(doc, server, doc_path) end')
-    replace(lsp, '              doc.lsp_open = true\n              log(server,',
-            '              mark_document_open(doc, server, doc_path)\n              log(server,')
-    replace(lsp, '      else\n        doc.lsp_open = true\n      end\n    end\n  end\nend',
-            '      else\n        mark_document_open(doc, server, doc_path)\n      end\n    end\n  end\nend')
-    server = data / 'plugins/lsp/server.lua'
-    replace(server, 'string.match(doc.abs_filename, l.pattern)',
-            'string.match(doc.abs_filename or doc.litefront_lsp_filename, l.pattern)')
-    replace(server, 'util.file_extension(doc.filename)',
-            'util.file_extension(doc.filename or doc.litefront_lsp_filename)')
+        lsp.replace('callback = function() doc.lsp_open = true end',
+                    'callback = function(server) mark_document_open(doc, server, doc_path) end')
+        lsp.replace('              doc.lsp_open = true\n              log(server,',
+                    '              mark_document_open(doc, server, doc_path)\n              log(server,')
+        lsp.replace('      else\n        doc.lsp_open = true\n      end\n    end\n  end\nend',
+                    '      else\n        mark_document_open(doc, server, doc_path)\n      end\n    end\n  end\nend')
+        # Keep declarative JSON language settings; do not execute workspace or user Lua.
+        lsp.replace('if util.file_exists(path .. "/.lite_lsp.lua") then', 'if false then')
+    with Source(data / 'plugins/lsp/server.lua') as server:
+        server.replace('string.match(doc.abs_filename, l.pattern)',
+                       'string.match(doc.abs_filename or doc.litefront_lsp_filename, l.pattern)')
+        server.replace('util.file_extension(doc.filename)',
+                       'util.file_extension(doc.filename or doc.litefront_lsp_filename)')
     replace(data / 'plugins/lsp/util.lua', 'doc.abs_filename == abs_filename',
             '(doc.abs_filename or doc.litefront_lsp_filename) == abs_filename')
-    replace(data / 'plugins/autocomplete.lua', 'local filename = doc and doc.filename or ""',
-            'local filename = doc and (doc.filename or doc.litefront_lsp_filename) or ""')
-    # Keep declarative JSON language settings; do not execute workspace or user Lua.
-    replace(lsp, 'if util.file_exists(path .. "/.lite_lsp.lua") then', 'if false then')
-    if args.target != 'web':
-        copy(DEPS / ('node-windows' if args.target=='windows' else 'node'), data / 'litefront/node')
-        copy(DEPS / ('github-cli-windows' if args.target=='windows' else 'github-cli'), data / 'litefront/github-cli')
+
+
+def copy_runtime_tools(data, target):
+    windows = target == 'windows'
+    if target != 'web':
+        copy(DEPS / ('node-windows' if windows else 'node'), data / 'litefront/node')
+        copy(DEPS / ('github-cli-windows' if windows else 'github-cli'), data / 'litefront/github-cli')
         tooling = data / 'litefront/tooling'
-        shutil.copytree(DEPS / 'tooling/node_modules', tooling / 'node_modules', symlinks=args.target!='windows',
-                        ignore=shutil.ignore_patterns('.bin') if args.target=='windows' else None)
+        shutil.copytree(DEPS / 'tooling/node_modules', tooling / 'node_modules', symlinks=not windows,
+                        ignore=shutil.ignore_patterns('.bin') if windows else None)
         copy(DEPS / 'tooling/package.json', tooling / 'package.json')
         copy(DEPS / 'tooling/package-lock.json', tooling / 'package-lock.json')
-    copy(ROOT / 'tools/preview.mjs', data / 'litefront/preview.mjs')
-    copy(ROOT / 'tools/format.mjs', data / 'litefront/format.mjs')
-    copy(ROOT / 'tools/outline.mjs', data / 'litefront/outline.mjs')
-    if args.target!='web':
-        copy(ROOT / 'tools/github-trial.mjs',data / 'litefront/github-trial.mjs')
-        copy(ROOT / 'tools/github-setup.mjs',data / 'litefront/github-setup.mjs')
-    copy(ROOT / 'tools/markdown-pdf.mjs', data / 'litefront/markdown-pdf.mjs')
-    # Keep licenses in every distributable.
+    scripts = ['preview', 'format', 'outline', 'markdown-pdf']
+    if target != 'web':
+        scripts += ['github-trial', 'github-setup']
+    for name in scripts:
+        copy(ROOT / f'tools/{name}.mjs', data / f'litefront/{name}.mjs')
+
+
+def copy_licenses(data):
+    """Keep licenses in every distributable."""
     licenses = data / 'litefront/licenses'
-    copy(ROOT / 'vendor/lite-xl/LICENSE', licenses / 'lite-xl.txt')
+    copy(UPSTREAM / 'LICENSE', licenses / 'lite-xl.txt')
     copy(ROOT / 'tools/lua-LICENSE.txt', licenses / 'lua.txt')
-    copy(ROOT / 'vendor/lite-xl/src/thirdparty/stb-LICENSE', licenses / 'stb.txt')
-    for source, name in [('features/lsp','lsp'),('libraries/widget','widget'),('sources/LiteMark','litemark'),('sources/languages','language-definitions'),('sources/snippets','snippets')]:
+    copy(UPSTREAM / 'src/thirdparty/stb-LICENSE', licenses / 'stb.txt')
+    for source, name in [('features/lsp', 'lsp'), ('libraries/widget', 'widget'), ('sources/LiteMark', 'litemark'),
+                         ('sources/languages', 'language-definitions'), ('sources/snippets', 'snippets')]:
         copy(DEPS / source / 'LICENSE', licenses / (name + '.txt'))
     copy(ROOT / 'tools/dependencies.lock.json', data / 'litefront/dependencies.lock.json')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('destination', type=Path)
+    parser.add_argument('--target', choices=['linux', 'windows', 'web'], default='linux')
+    args = parser.parse_args()
+    data = args.destination.resolve()
+    check_destination(data)
+    if data.exists():
+        shutil.rmtree(data)
+    copy(UPSTREAM / 'data', data)
+    patch_start(data)
+    patch_core(data)
+    copy_application(data)
+    patch_builtin_plugins(data)
+    copy_bundled_plugins(data)
+    patch_minimap(data)
+    patch_markdown(data)
+    patch_completion(data)
+    patch_lsp(data)
+    copy_runtime_tools(data, args.target)
+    copy_licenses(data)
     print(f'Built-in application data prepared: {data}')
+
 
 if __name__ == '__main__':
     main()
