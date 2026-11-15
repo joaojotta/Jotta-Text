@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {run} from '../dist/web/worker-core.mjs';
+import {run} from '../dist/web/worker-core.js';
 import {relativePath,workspacePath,importFiles} from '../web/files.mjs';
 
 test('browser imports reject traversal, drive letters and conflicting workspace files',async()=>{

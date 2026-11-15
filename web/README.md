@@ -23,8 +23,15 @@ python3 -m http.server 8080 --directory dist/web
 Open `http://localhost:8080`. The complete static site is in `dist/web`; its
 versioned distribution is `dist/JottaText-0.6.1-web.zip` with a SHA-256 checksum.
 Serve the entire extracted ZIP over HTTP/HTTPS, including `.wasm`, `.data`, fonts
-and local worker libraries. Opening `index.html` through `file://` does not work.
-Relative asset URLs support deployment under a subdirectory.
+and local worker libraries. Opening `index.html` through `file://` is not
+supported. Relative asset URLs support deployment under a subdirectory.
+
+Any static web server works without extra configuration: every script is a `.js`
+file, which servers send as JavaScript. Sending `.wasm` as `application/wasm`
+lets the engine compile while it downloads; otherwise the browser console notes
+a fallback and the editor still starts. If the page reports that it could not
+load its files, check that the whole folder was uploaded and that `.js` files
+are served as JavaScript.
 
 The first build downloads pinned source dependencies and Emscripten's verified
 SDL2/FreeType/HarfBuzz ports. After those caches are populated,
@@ -74,8 +81,9 @@ storage are independent. Desktop feature parity is not complete.
 ```bash
 node --test tests/test-web.mjs
 npm install --prefix dist/browser-test --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
-dist/browser-test/node_modules/.bin/playwright install chromium
-node tests/test-web-browser.mjs
+dist/browser-test/node_modules/.bin/playwright install chromium firefox
+node tests/test-web-browser.mjs chromium
+node tests/test-web-browser.mjs firefox
 ```
 
 The Chromium check runs the compiled editor, imports source, formats an unsaved

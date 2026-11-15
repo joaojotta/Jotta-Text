@@ -6,6 +6,10 @@
   Text…" with every button disabled, for example when only `index.html` was
   extracted from the ZIP or a script cannot load. If browser storage does not
   answer within 10 seconds, start without it and say so.
+- Web: publish every browser module as `.js` instead of `.mjs`. Web servers that
+  do not know the `.mjs` extension (common Apache and nginx defaults) sent the
+  scripts with the wrong type, so browsers refused to run them and the page could
+  not load its files. Any static server now works without configuration.
 - Web: test the compiled editor in Firefox as well as Chromium.
 - AppImage and Flatpak checksum files name only the package, so
   `sha256sum -c` works wherever the download is saved. The Flatpak bundle is
