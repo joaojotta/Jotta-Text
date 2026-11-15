@@ -1,5 +1,20 @@
 # Changelog
 
+## Jotta Text v0.5.30 — 2026-11-15
+
+- Replace terminal-only GitHub setup with browser sign-in, a local folder chooser
+  and a repository picker. Remember the pairing and supply missing commit author
+  details from the account without changing global Git configuration.
+- Bundle checksum-pinned GitHub CLI on desktop builds so Flatpak authentication
+  works within its existing sandbox. Keep credential handling outside the UI;
+  show/copy only the one-time browser code and support cancellation/sign-out.
+- Add Sync now for saved files: respect .gitignore, commit and push without force,
+  download clean fast-forward updates, and stop on unsaved work or divergent
+  histories. Preserve the detailed Changes view for reviewing individual files.
+- Test login progress, repository selection, connection recovery, first uploads,
+  empty-folder downloads and conflict handling with isolated fixtures/local Git
+  remotes. Preserve the existing optional trial switch and Portuguese UI.
+
 ## Jotta Text v0.5.29 — 2026-11-15
 
 - Rename the application to Jotta Text across the interface, translations,

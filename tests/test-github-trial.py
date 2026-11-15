@@ -17,6 +17,30 @@ with tempfile.TemporaryDirectory(prefix='jotta-text-github-') as directory:
     (app/'bin').mkdir(parents=True)
     for name in ['lite-xl','litefront-file-dialog']:
         shutil.copy2(source/'bin'/name,app/'bin'/name)
+    # A fake CLI exercises the real streaming login/UI without opening a browser
+    # or reading/writing any actual GitHub credentials.
+    helper=data/'litefront/github-cli'
+    (helper/'gh').write_text('''#!/bin/sh
+base="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$base/../node/node" "$base/fake.mjs" "$@"
+''')
+    (helper/'gh').chmod(0o755)
+    (helper/'fake.mjs').write_text(r'''
+import fs from 'node:fs/promises';import path from 'node:path';
+const args=process.argv.slice(2);
+const account={login:'jotta-test',id:42,name:'Jotta Test',email:null};
+const repo={html_url:'https://github.com/jotta-test/project',permissions:{push:true},default_branch:'main'};
+if(args[0]==='auth'&&args[1]==='login'){
+  process.stderr.write('! First copy your one-time co');
+  setTimeout(async()=>{process.stderr.write('de: TEST-1234\n');
+    await fs.mkdir(process.env.GH_CONFIG_DIR,{recursive:true});
+    await fs.writeFile(path.join(process.env.GH_CONFIG_DIR,'hosts.yml'),'test fixture only');},80);
+}else if(args[0]==='api'){
+  const endpoint=args.at(-1);
+  console.log(JSON.stringify(endpoint==='user'?account:endpoint.startsWith('user/repos?')?
+    Array.from({length:35},(_,i)=>({...repo,html_url:repo.html_url+(i===0?'':String(i))})):repo));
+}else process.exit(1);
+''')
     if build:
         shutil.copy2(source/'bin/git',app/'bin/git')
         shutil.copytree(source/'libexec/git-core',app/'libexec/git-core',symlinks=True)

@@ -5,6 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {createInterface} from 'node:readline';
 import {fileURLToPath} from 'node:url';
+import {setupActions,runSetup,helperSetting,redactError} from './github-setup.mjs';
 
 export function githubRemote(value){
   if(typeof value!=='string'||/[\s\x00-\x1f\x7f]/.test(value))return null;
@@ -46,7 +47,7 @@ function stop(child){
     }else process.kill(-child.pid,'SIGTERM');
   }catch{try{child.kill();}catch{}}
 }
-function redact(text){return String(text).replace(/(https?:\/\/)[^/\s@]+@/gi,'$1[redacted]@').slice(0,5000);}
+function redact(text){return redactError(text);}
 function safePath(value){
   if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||value.startsWith('/')||/^[a-z]:/i.test(value)||value.split('/').some(x=>x==='..'||x==='.'||!x))throw new Error('Invalid repository path');
   return value;
@@ -62,6 +63,12 @@ export async function run(request,testing={}){
   const env={...process.env,...testing.env,GIT_TERMINAL_PROMPT:'0',GCM_INTERACTIVE:'Never',GIT_OPTIONAL_LOCKS:'0',
     GIT_ASKPASS:'',SSH_ASKPASS:'',SSH_ASKPASS_REQUIRE:'never',GIT_PAGER:'cat',LC_ALL:'C',
     GIT_SSH_COMMAND:process.env.GIT_SSH_COMMAND||'ssh -oBatchMode=yes -oStrictHostKeyChecking=yes'};
+  const userdir=request.userdir||env.LITE_USERDIR;
+  const gh=testing.gh||path.join(directoryName,'github-cli',process.platform==='win32'?'gh.exe':'gh');
+  if(userdir){
+    env.GH_CONFIG_DIR=path.join(userdir,'github-auth');env.GH_HOST='github.com';env.GH_PROMPT_DISABLED='1';env.GH_NO_UPDATE_NOTIFIER='1';
+    for(const key of ['GH_TOKEN','GITHUB_TOKEN','GH_ENTERPRISE_TOKEN','GITHUB_ENTERPRISE_TOKEN','GH_REPO','GH_DEBUG'])delete env[key];
+  }
   if(bundledGit){
     env.GIT_EXEC_PATH=path.resolve(path.dirname(bundled),'../libexec/git-core');
     env.GIT_TEMPLATE_DIR=path.resolve(path.dirname(bundled),'../share/git-core/templates');
@@ -70,6 +77,11 @@ export async function run(request,testing={}){
   for(const key of ['GIT_DIR','GIT_WORK_TREE','GIT_INDEX_FILE','GIT_COMMON_DIR','GIT_OBJECT_DIRECTORY','GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_NAMESPACE'])delete env[key];
   const prefix=['--no-pager','--literal-pathspecs','-c','color.ui=false','-c','core.quotepath=false',
     '-c','core.fsmonitor=false','-c','core.untrackedCache=false'];
+  if(userdir){
+    try{await fs.access(path.join(env.GH_CONFIG_DIR,'hosts.yml'));
+      prefix.push('-c','credential.helper=','-c','credential.https://github.com.helper=','-c',helperSetting(gh));
+    }catch{}
+  }
   function command(args,{cwd,input,limit=4*1024*1024,timeout=20000,optional=false}={}){
     return new Promise((resolve,reject)=>{
       const child=spawn(git,[...prefix,...args],{cwd,env,windowsHide:true,detached:process.platform!=='win32',stdio:['pipe','pipe','pipe']});
@@ -89,6 +101,7 @@ export async function run(request,testing={}){
     });
   }
   const action=request.action;
+  if(setupActions.has(action))return runSetup(request,{git:command,env,gh,active,testing,remoteInfo:githubRemote});
   if(action==='clone'){
     const remote=githubRemote(request.url);
     if(!remote&&!testing.allowLocal)throw new Error('Use a GitHub HTTPS or SSH repository URL without embedded credentials.');
@@ -186,7 +199,7 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
       if(Buffer.byteLength(line)>128*1024)throw new Error('GitHub request is too large');
       const request=JSON.parse(line);if(request.action==='cancel'){cancel();return;}
       if(started)return;started=true;
-      const result=await run(request);process.stdout.write(JSON.stringify({ok:true,result}),()=>process.exit(0));
+      const result=await run(request,{progress:event=>process.stdout.write(JSON.stringify(event)+'\n')});process.stdout.write(JSON.stringify({ok:true,result}),()=>process.exit(0));
     }catch(error){for(const child of active)stop(child);process.stdout.write(JSON.stringify({ok:false,error:redact(error.message)}),()=>process.exit(0));}
   });
 }

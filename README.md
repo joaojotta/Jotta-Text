@@ -1,4 +1,4 @@
-# Jotta Text v0.5.29
+# Jotta Text v0.5.30
 
 Jotta Text continues JottaXL and LiteFront, carrying forward their features and settings.
 See [CHANGELOG.md](CHANGELOG.md) for this cumulative release.
@@ -269,12 +269,20 @@ macOS packaging is not implemented.
 
 Enable **Preferences → Settings → General → GitHub trial**, choose **Apply**,
 then use **Tools → GitHub (experimental)…** or **Ctrl+Alt+G**. The desktop trial
-can clone GitHub repositories, inspect status/diffs, stage/unstage, commit staged
-files, fetch and push. Git commits saved, staged content while unsaved buffers
-stay in the editor. The switch defaults to off and can be disabled at any time.
+opens a simple setup screen: **sign in through your browser**, **choose a local
+folder**, and **choose a GitHub repository**. Connect once, then use **Sync now**
+to commit and push saved changes. The folder/repository pairing is remembered.
+An empty local folder downloads the selected repository; to upload an existing
+project, choose an empty GitHub repository. **New repository…** opens GitHub's
+creation page. **Changes…** retains status/diffs, stage/unstage, commit, fetch
+and push controls. The switch defaults to off and can be disabled at any time.
 
-Native/AppImage and Windows builds require installed Git and existing GitHub
-authentication. Flatpak includes Git from the SDK without host-spawn access.
+Native/AppImage and Windows builds require installed Git. Desktop packages include
+GitHub CLI for browser sign-in; Flatpak also includes Git and needs no host CLI
+or terminal login. Sync respects `.gitignore`, uses no force push, and stops for
+unsaved documents, conflicting changes or diverged histories. Clean incoming
+changes are fast-forwarded. GitHub CLI manages credentials in the system store
+when available, with a private configuration-file fallback in app settings.
 See [GITHUB_TRIAL.md](GITHUB_TRIAL.md) for setup, limits, tests and removal.
 
 ## Automated builds
@@ -346,7 +354,7 @@ Use the native build prerequisites listed above, plus `ldd` and `sha256sum`:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.5.29-x86_64.AppImage (on an x86_64 host)
+# Output: dist/JottaText-0.5.30-x86_64.AppImage (on an x86_64 host)
 ```
 
 The script builds the editor and packages its native libraries, fonts, Node and
@@ -360,9 +368,9 @@ Nothing is installed; the executable and its SHA-256 checksum are written to
 Run the resulting file directly:
 
 ```bash
-./dist/JottaText-0.5.29-x86_64.AppImage
+./dist/JottaText-0.5.30-x86_64.AppImage
 # Without FUSE:
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.29-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.30-x86_64.AppImage
 ```
 
 The AppImage shares the native application's `~/.config/litefront` settings and
@@ -370,7 +378,7 @@ session. Close any running native instance before switching builds. The system
 still supplies glibc, graphics drivers and desktop services. Bundling libraries
 does not lower their glibc requirement: build on the oldest Linux distribution
 you intend to support. This source build is not a universal Linux binary.
-The v0.5.29 x86_64 artifact built on this Arch system requires **glibc 2.44 or
+The v0.5.30 x86_64 artifact built on this Arch system requires **glibc 2.44 or
 newer**. Its packaging and editor smoke checks passed on this host; other
 distributions and aarch64 have not been tested.
 

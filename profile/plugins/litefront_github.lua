@@ -27,7 +27,7 @@ function core.on_event(kind,...)
   elseif kind=='mousemoved' then panel.move(...);return false
   elseif kind=='mousereleased' then state.drag=nil;return false
   elseif kind=='mousewheel' then
-    local dy=...;local count=state.data and #state.data.files or 0
+    local dy=...;local count=panel.item_count()
     state.wheel=(state.wheel or 0)+dy*3
     local steps=state.wheel>=0 and math.floor(state.wheel) or math.ceil(state.wheel);state.wheel=state.wheel-steps
     state.scroll=math.max(0,math.min(math.max(0,count-(state.visible or 1)),state.scroll-steps));core.redraw=true;return false

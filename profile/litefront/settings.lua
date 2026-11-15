@@ -267,8 +267,8 @@ function M.layout()
     note('Open files and unsaved edits are recovered automatically.')
     if not JOTTA_WEB then
       heading('Experimental features')
-      row('toggle','github_trial','GitHub trial','Clone, review, commit and push with Git.')
-      note('Disable this option to hide the trial. Git credentials stay with Git.')
+      row('toggle','github_trial','GitHub trial','Sign in, connect a folder and sync with GitHub.')
+      note('Disable this option to hide GitHub. Your connections are kept.')
     end
     heading('Jotta Text '..APP_VERSION)
     note('Changes take effect when you choose Apply.')

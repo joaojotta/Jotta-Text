@@ -29,7 +29,7 @@ With the native prerequisites above installed:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.5.29-x86_64.AppImage (or aarch64 on that architecture)
+# Output: dist/JottaText-0.5.30-x86_64.AppImage (or aarch64 on that architecture)
 python3 tests/test-appimage.py
 ```
 

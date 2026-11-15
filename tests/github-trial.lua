@@ -29,6 +29,30 @@ local buffer=table.concat(source.lines)
 assert(command.perform('litefront:github-trial'))
 local view=require 'litefront.github.view';local service=require 'litefront.github.service'
 wait_for(function() return view.active and view.active.data and not service.job end,'Git status did not load')
+assert(view.active.mode=='setup' and not view.active.account,'setup did not open as the default view')
+local controls={};for _,item in ipairs(view.layout().controls) do controls[item.id]=item end
+assert(controls['account-label'] and controls['folder-label'] and controls['repo-label'],'three-step setup is incomplete')
+local start=process.start;local opened={}
+process.start=function(args,...)
+ if args[2]=='github-uri' then opened[#opened+1]=args[3];return end
+ return start(args,...)
+end
+view.action('login')
+wait_for(function() return view.active.account and not service.job end,'browser login did not complete')
+process.start=start
+assert(view.active.account.login=='jotta-test' and system.get_clipboard()=='TEST-1234','login code/account was not delivered to the UI')
+assert(opened[1]=='https://github.com/login/device','sign-in did not open the GitHub device page')
+view.action('repos');wait_for(function() return not service.job and view.active.mode=='repos' end,'repository picker did not load')
+view.draw();assert(view.active.scrollbar,'repository list is not scrollable')
+view.key('down');assert(view.active.selected==2,'arrow keys did not select a repository')
+view.active.focus='filter';view.input('project');view.key('home');view.key('return')
+assert(view.active.mode=='setup' and view.active.inputs.repo.text=='https://github.com/jotta-test/project','repository selection failed')
+view.action('connect');wait_for(function() return not service.job and view.active.connection and view.active.data end,'folder did not connect')
+view.action('sync');assert(require('litefront.dialogs').active,'sync did not ask to save unsaved documents')
+require('litefront.dialogs').choose(1)
+assert(table.concat(source.lines)==buffer and source:is_dirty(),'setup changed unsaved source')
+view.action('changes')
+wait_for(function() return not service.job and view.active.mode=='repository' end,'Changes did not open')
 assert(view.active.data.branch=='main' and view.active.data.fileCount==2,'wrong branch or file list')
 view.draw()
 core.on_event('mousewheel',.15,0);view.draw()
