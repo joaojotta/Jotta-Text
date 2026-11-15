@@ -18,8 +18,34 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('image', nargs='?', type=Path,
                     default=ROOT / f'dist/JottaText-{VERSION}-{platform.machine()}.AppImage')
 image = parser.parse_args().image.resolve()
+diagnostics = ROOT / 'dist/test-results/appimage'
+diagnostics.mkdir(parents=True, exist_ok=True)
 digest = Path(str(image) + '.sha256').read_text().split()[0]
 assert hashlib.sha256(image.read_bytes()).hexdigest() == digest, 'AppImage checksum mismatch'
+
+def stop_runtime(process):
+    # The runtime can exit before its editor child. Wait for live group members
+    # before deleting extracted fonts/data or collecting their final error output.
+    def running():
+        process.poll()
+        for status in Path('/proc').glob('[0-9]*/stat'):
+            try:
+                fields=status.read_text().rsplit(')',1)[1].split()
+                if fields[0]!='Z' and int(fields[2])==process.pid:
+                    return True
+            except (OSError,ValueError,IndexError):
+                continue
+        return False
+    try:
+        os.killpg(process.pid,signal.SIGTERM)
+        deadline=time.monotonic()+10
+        while running() and time.monotonic()<deadline:
+            time.sleep(.1)
+        if running():
+            os.killpg(process.pid,signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    process.wait(timeout=10)
 
 with tempfile.TemporaryDirectory(prefix='Jotta Text AppImage test ') as directory:
     temp = Path(directory)
@@ -34,21 +60,31 @@ with tempfile.TemporaryDirectory(prefix='Jotta Text AppImage test ') as director
                APPIMAGE_EXTRACT_AND_RUN='1', TMPDIR=str(temp))
     env.pop('LD_LIBRARY_PATH', None)
     # Launch the unchanged image through its real runtime, without requiring FUSE.
-    process = subprocess.Popen([str(image), str(project / 'format.js')], env=env,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     snapshot = temp / 'config/litefront/documents.lua'
-    try:
-        deadline = time.monotonic() + 15
-        while time.monotonic() < deadline and process.poll() is None:
-            if snapshot.is_file() and str(project / 'format.js') in snapshot.read_text():
-                break
-            time.sleep(.1)
-        else:
-            raise AssertionError('Unmodified AppImage did not open its document and write recovery data')
-    finally:
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGTERM)
-        stdout, stderr = process.communicate(timeout=10)
+    error_log = temp / 'config/litefront/error.txt'
+    recovered = False
+    # A cold extraction expands hundreds of MB on CI. File-backed output also
+    # prevents a verbose runtime or loader from blocking on a full pipe.
+    with (diagnostics/'stdout.log').open('wb') as output, (diagnostics/'stderr.log').open('wb') as errors:
+        process = subprocess.Popen([str(image), str(project / 'format.js')], env=env,
+                                   stdout=output, stderr=errors, start_new_session=True)
+        try:
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
+                if snapshot.is_file() and str(project / 'format.js') in snapshot.read_text():
+                    recovered = True
+                    break
+                if process.poll() is not None or error_log.exists():
+                    break
+                time.sleep(.1)
+        finally:
+            stop_runtime(process)
+    stdout = (diagnostics/'stdout.log').read_text(errors='replace')[-20000:]
+    stderr = (diagnostics/'stderr.log').read_text(errors='replace')[-20000:]
+    report = error_log.read_text(errors='replace') if error_log.is_file() else ''
+    (diagnostics/'error.txt').write_text(report)
+    assert recovered, ('Unmodified AppImage did not open its document and write recovery data'
+                       f'\nExit code: {process.returncode}\nstdout:\n{stdout}\nstderr:\n{stderr}\nerror.txt:\n{report}')
     assert (project / 'format.js').read_text() == 'const answer=42', 'AppImage changed the source file'
     assert not (temp / 'config/litefront/error.txt').exists(), (stdout, stderr)
 

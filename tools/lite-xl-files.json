@@ -11,7 +11,7 @@
     },
     "data/core/init.lua": {
       "before": "34fdf245c3fbc9b2ea76e4ec07643206e0afcacb2bcc7ef0e05c0cbfde328b70",
-      "after": "dc7c1e6436613defd0cf33825888620d63bbf6f193d5aa2618badcdbbb0d5865"
+      "after": "178f575d9299aec6b90b3bf22dc2e9cfe0081db1423f400cd04f47c488e80d69"
     },
     "data/plugins/projectsearch.lua": {
       "before": "c27d52b17243e64a9493f9d87cdfaa3b5a51fdbd10c20b5326ba3c331873cba6",

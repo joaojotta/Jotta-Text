@@ -1,5 +1,16 @@
 # Changelog
 
+## Jotta Text v0.5.32 — 2026-11-15
+
+- Invoke npm's JavaScript entry point through Node so the Windows/MSYS2 bootstrap
+  does not try to execute a shell shim. Send the Windows Lua patch as LF bytes.
+- Upgrade official GitHub actions to releases using Node 24 and add npm bootstrap
+  checks, including real installations in paths containing spaces/shell characters.
+- Preserve AppImage startup stdout, stderr and recovery errors, avoid pipe stalls,
+  allow cold extraction time, and upload diagnostic artifacts on a failed build.
+- Keep scheduled editor tasks running without window focus; this fixes the Ubuntu
+  AppImage recovery check and background recovery/language-server stalls.
+
 ## Jotta Text v0.5.31 — 2026-11-15
 
 - Fix GitHub builds: use the pinned Lua runtime for native/AppImage builds,

@@ -24,6 +24,9 @@ with tempfile.TemporaryDirectory(prefix='jotta-text-session-') as directory:
     init=data/'litefront/init.lua'
     init.write_text(init.read_text()+r'''
 local core=require 'core'
+-- Headless Ubuntu windows have no focus. Background tasks must still run
+-- without mouse/keyboard events, including the delayed recovery snapshots.
+system.window_has_focus=function() return false end
 core.add_thread(function()
  coroutine.yield(0.2)
  local ok,err=pcall(function()

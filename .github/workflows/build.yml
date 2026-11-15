@@ -18,7 +18,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check source completeness and repository layout
         run: python3 tools/check-source.py
       - id: version
@@ -39,11 +39,11 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.11.1'
       - name: Install native prerequisites
@@ -51,7 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build pkg-config librsvg2-bin libsdl2-dev libfreetype6-dev libharfbuzz-dev libpcre2-dev libglib2.0-dev librsvg2-dev libwebp-dev libtiff-dev
           python -m pip install meson==1.9.1 Pillow==12.0.0
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             vendor/litefront/node
@@ -67,10 +67,22 @@ jobs:
         run: bash scripts/build-appimage.sh
       - name: Test packaged AppImage
         run: python tests/test-appimage.py
+      - name: Preserve AppImage startup diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-AppImage-diagnostics
+          path: |
+            dist/test-results/appimage/
+            dist/native-build/meson-logs/meson-log.txt
+            dist/JottaText-*.AppImage
+          if-no-files-found: warn
       - name: Test cursor recovery and real language completion
         run: |
+          python tests/test-build-tools.py
           python tests/test-engine-patch.py
           python tests/test-session.py
+          python tests/test-recovery.py
           python tests/test-completion.py
       - name: Test browser Lua adapters
         run: python tests/test-browser-profile.py
@@ -78,7 +90,7 @@ jobs:
         run: |
           node --test tests/test-github-trial.mjs tests/test-github-setup.mjs
           python tests/test-github-trial.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: JottaText-${{ needs.version.outputs.version }}-AppImage-x86_64
           path: |
@@ -91,11 +103,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.11.1'
       - name: Install build tools and Flatpak SDK
@@ -115,7 +127,7 @@ jobs:
           dbus-run-session -- python tests/test-completion.py --flatpak-build dist/build
           dbus-run-session -- python tests/test-editing.py --flatpak-build dist/build
           dbus-run-session -- python tests/test-github-trial.py --flatpak-build dist/build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: JottaText-${{ needs.version.outputs.version }}-Flatpak-x86_64
           path: |
@@ -131,7 +143,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -152,13 +164,15 @@ jobs:
             mingw-w64-ucrt-x86_64-librsvg
             mingw-w64-ucrt-x86_64-libwebp
             mingw-w64-ucrt-x86_64-libtiff
+      - name: Check Node and npm build tools
+        run: python tests/test-build-tools.py
       - name: Build portable Windows ZIP
         run: bash scripts/build-windows.sh
       - name: Test portable ZIP with MSYS2 removed from runtime PATH
         run: |
           python tests/test-engine-patch.py
           python tests/test-windows.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: JottaText-${{ needs.version.outputs.version }}-Windows-x64-portable
           path: |
@@ -171,11 +185,11 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.11.1'
       - name: Install build tools
@@ -197,7 +211,7 @@ jobs:
           dist/browser-test/node_modules/.bin/playwright install --with-deps chromium
       - name: Test the compiled editor in Chromium
         run: node tests/test-web-browser.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: JottaText-${{ needs.version.outputs.version }}-Web
           path: |

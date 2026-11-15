@@ -174,7 +174,7 @@ index d59609d75d7a0b853d32362fba5951bdf68f5ff7..026637f0dcb375885dd55cbd41c8c878
          common.draw_text(style.font, style.dim, item.info, "right", x, y, w - style.padding.x, h)
        end
 diff --git a/data/core/init.lua b/data/core/init.lua
-index b6734c94505ca0ea2ebb1821af535656578fa8b4..099c062764e7516efcc2d17ed9a9dd0cd3273cdd 100644
+index b6734c94505ca0ea2ebb1821af535656578fa8b4..716eada04dbd5bfb1bcb170297e7953b79cfb9c2 100644
 --- a/data/core/init.lua
 +++ b/data/core/init.lua
 @@ -1305,7 +1305,10 @@ function core.step()
@@ -189,6 +189,17 @@ index b6734c94505ca0ea2ebb1821af535656578fa8b4..099c062764e7516efcc2d17ed9a9dd0c
      end
      core.redraw = true
    end
+@@ -1421,7 +1424,9 @@ function core.run()
+           next_step = nil -- if we've recevied an event, perform a step
+         end
+       else
+-        system.wait_event()
++        -- Keep recovery, language servers and previews running while unfocused.
++        -- Waiting indefinitely here prevents scheduled coroutines from waking.
++        system.wait_event(math.min(time_to_wake, 1))
+         next_step = nil -- perform a step when we're not in focus if get we an event
+       end
+     else -- if we redrew, then make sure we only draw at most FPS/sec
 diff --git a/data/plugins/projectsearch.lua b/data/plugins/projectsearch.lua
 index 45019374cc6511798a3291d83a9524844f9f7af7..4529ed3d05541a7b8a2d43dcff366cad155911e1 100644
 --- a/data/plugins/projectsearch.lua

@@ -21,7 +21,7 @@ python3 -m http.server 8080 --directory dist/web
 ```
 
 Open `http://localhost:8080`. The complete static site is in `dist/web`; its
-versioned distribution is `dist/JottaText-0.5.31-web.zip` with a SHA-256 checksum.
+versioned distribution is `dist/JottaText-0.5.32-web.zip` with a SHA-256 checksum.
 Serve the entire extracted ZIP over HTTP/HTTPS, including `.wasm`, `.data`, fonts
 and local worker libraries. Opening `index.html` through `file://` does not work.
 Relative asset URLs support deployment under a subdirectory.

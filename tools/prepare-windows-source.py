@@ -14,7 +14,9 @@ if not lua.is_dir():
 if not (lua/'src/utf8_wrappers.c').is_file():
     patch=(source/'resources/windows/001-lua-unicode.diff').read_text()
     patch=''.join(line.replace('\\','/') if line.startswith(('diff ','--- ','+++ ')) else line for line in patch.splitlines(keepends=True))
-    subprocess.run(['patch','-p1','--binary','--batch','--forward'],cwd=lua,input=patch,text=True,check=True)
+    # Send literal LF bytes: Windows text-mode pipes would translate the patch
+    # to CRLF even when the source checkout uses LF.
+    subprocess.run(['patch','-p1','--binary','--batch','--forward'],cwd=lua,input=patch.encode('utf-8'),check=True)
 # Recovery/settings replace their previous snapshot atomically on Windows too.
 wrapper=lua/'src/utf8_wrappers.c'
 text=wrapper.read_text()

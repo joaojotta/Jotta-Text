@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import platform
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -18,6 +19,27 @@ LOCK = json.loads((ROOT / 'tools/dependencies.lock.json').read_text())
 
 def run(*args):
     subprocess.run(args, check=True, cwd=ROOT)
+
+def npm_command(*arguments):
+    """Run npm's JavaScript entry point, including MSYS2's non-executable shim."""
+    executable=shutil.which('node.exe') or shutil.which('node')
+    if not executable:
+        raise SystemExit('Install Node.js and npm build prerequisites first')
+    node=Path(executable).absolute()
+    candidates=[]
+    npm=shutil.which('npm')
+    if npm:
+        resolved=Path(npm).resolve()
+        if resolved.name=='npm-cli.js':candidates.append(resolved)
+    for directory in (node.parent,node.parent.parent):
+        candidates.extend(directory/relative for relative in (
+            'node_modules/npm/bin/npm-cli.js',
+            'lib/node_modules/npm/bin/npm-cli.js',
+            'share/nodejs/npm/bin/npm-cli.js'))
+    cli=next((path for path in candidates if path.is_file()),None)
+    if not cli:
+        raise SystemExit('Cannot locate npm-cli.js beside Node.js. Install the Node.js/npm build tools.')
+    return [str(node),str(cli),*arguments]
 
 def main():
     parser = argparse.ArgumentParser()
@@ -55,7 +77,7 @@ def main():
         if args.offline and not (tooling / 'node_modules/.package-lock.json').exists():
             raise SystemExit('Missing bundled Node dependencies; run fetch-dependencies.py online first')
         if not args.offline:
-            run('npm', 'ci', '--prefix', str(tooling), '--ignore-scripts', '--no-audit', '--no-fund')
+            run(*npm_command('ci', '--prefix', str(tooling), '--ignore-scripts', '--no-audit', '--no-fund'))
         marker.write_text(digest)
     if args.target=='web':
         print('Browser source dependencies ready')

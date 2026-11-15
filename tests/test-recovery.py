@@ -22,6 +22,7 @@ with tempfile.TemporaryDirectory(prefix='jotta-text-recovery-') as directory:
     init=data/'litefront/init.lua'
     init.write_text(init.read_text()+r'''
 local core=require 'core'
+system.window_has_focus=function() return false end
 core.add_thread(function()
  coroutine.yield(.25)
  local ok,err=xpcall(function()
