@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='litefront-completion-test-') as directo
     if build:
         invocation=['flatpak','build','--runtime','--readonly',f'--filesystem={root}',f'--bind-mount=/app={app}',
             *[f'--env={key}={env[key]}' for key in ['SDL_VIDEODRIVER','LITE_USERDIR','LITEFRONT_COMPLETION_PROJECT']],str(build.resolve()),'/app/bin/lite-xl']
-    result=subprocess.run(invocation,cwd=project,env=env,capture_output=True,text=True,timeout=70)
+    result=subprocess.run(invocation,cwd=project,env=env,capture_output=True,text=True,timeout=120)
     report=user/'completion-test.txt'
     assert result.returncode==0 and report.exists(),result.stderr+result.stdout
     assert report.read_text()=='PASS\n',report.read_text()

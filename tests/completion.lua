@@ -78,7 +78,8 @@ local function embedded(text,label,accept_key,saved,automatic)
     doc:remove(line,col-#word,line,col);doc:set_selection(line,col-#word)
     received={};core.root_view:on_text_input(word)
   else assert(command.perform('litefront:complete')) end
-  wait_for(function() return received[label] end,'no embedded CSS completion received for '..label)
+  -- The first request also starts the CSS language server, which is slow on busy CI runners.
+  wait_for(function() return received[label] end,'no embedded CSS completion received for '..label,30)
   coroutine.yield(.3)
   local visible=false
   for _,set in pairs(autocomplete.map_manually) do for _,item in ipairs(set.items) do if item.text==label then visible=true end end end
