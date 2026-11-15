@@ -167,6 +167,9 @@ end
     replace(markdown_view, 'local border_color = style.syntax["keyword"]', 'local border_color = style.divider')
     replace(data / 'plugins/lsp/listbox.lua', ', style.background)', ', style.ui_background or style.background)')
     replace(data / 'plugins/autocomplete.lua', ', style.background)', ', style.ui_background or style.background)')
+    replace(data / 'plugins/autocomplete.lua',
+            '  return doc:get_text(line1, col1, line2, col2)\nend\n\nlocal function get_active_view()',
+            "  return require('litefront.completion_context').partial(doc, line2, col2, doc:get_text(line1, col1, line2, col2))\nend\n\nlocal function get_active_view()")
     lsp = data / 'plugins/lsp/init.lua'
     replace(lsp, 'USERDIR .. "/plugins/lsp/fonts/symbols.ttf"', 'DATADIR .. "/plugins/lsp/fonts/symbols.ttf"')
     # Separate LSP identities let untitled buffers keep their normal Save dialog.
@@ -183,6 +186,27 @@ local LineWrapping
     code = code.replace('      lsp.open_document(self)\n    end)\n  else',
                         '      lsp.start_server(document_filename(self), core.project_dir)\n      lsp.open_document(self)\n    end)\n  else', 1)
     lsp.write_text(code)
+    replace(lsp, 'if cline ~= line or cchar ~= col then',
+            'if core.active_view.doc ~= doc or cline ~= line or cchar ~= col then')
+    # A shared Emmet server can open a document before a newly started CSS/HTML
+    # server. Wait for each didOpen to be written, not just initialization: LSP
+    # notifications and requests have separate queues and can otherwise race.
+    replace(lsp, 'function lsp.open_document(doc)\n', """local function mark_document_open(doc, server, path)
+  local filename = document_filename(doc)
+  if not filename or core.project_absolute_path(filename) ~= path then return end
+  doc.lsp_open = true
+  doc.litefront_lsp_open_servers = doc.litefront_lsp_open_servers or setmetatable({}, { __mode = 'k' })
+  doc.litefront_lsp_open_servers[server] = path
+end
+
+function lsp.open_document(doc)
+""")
+    replace(lsp, 'callback = function() doc.lsp_open = true end',
+            'callback = function(server) mark_document_open(doc, server, doc_path) end')
+    replace(lsp, '              doc.lsp_open = true\n              log(server,',
+            '              mark_document_open(doc, server, doc_path)\n              log(server,')
+    replace(lsp, '      else\n        doc.lsp_open = true\n      end\n    end\n  end\nend',
+            '      else\n        mark_document_open(doc, server, doc_path)\n      end\n    end\n  end\nend')
     server = data / 'plugins/lsp/server.lua'
     replace(server, 'string.match(doc.abs_filename, l.pattern)',
             'string.match(doc.abs_filename or doc.litefront_lsp_filename, l.pattern)')
@@ -212,6 +236,7 @@ local LineWrapping
     # Keep licenses in every distributable.
     licenses = data / 'litefront/licenses'
     copy(ROOT / 'vendor/lite-xl/LICENSE', licenses / 'lite-xl.txt')
+    copy(ROOT / 'tools/lua-LICENSE.txt', licenses / 'lua.txt')
     copy(ROOT / 'vendor/lite-xl/src/thirdparty/stb-LICENSE', licenses / 'stb.txt')
     for source, name in [('features/lsp','lsp'),('libraries/widget','widget'),('sources/LiteMark','litemark'),('sources/languages','language-definitions'),('sources/snippets','snippets')]:
         copy(DEPS / source / 'LICENSE', licenses / (name + '.txt'))

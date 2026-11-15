@@ -5,7 +5,28 @@ local autocomplete=require 'plugins.autocomplete'
 local workspace=require 'plugins.litefront_workspace'
 local syntax=require 'core.syntax'
 local keymap=require 'core.keymap'
+-- Simulate a slow document-open write after CSS initialization. Another shared
+-- server (Emmet) is already running, so its readiness must not stand in for CSS.
+local Server=require 'plugins.lsp.server'
+local notifications=Server.process_notifications
+local delayed_css={}
+function Server:process_notifications(...)
+  local first=self.notification_list and self.notification_list[1]
+  if self.name=='vscode_css_ls' and first and first.method=='textDocument/didOpen' then
+    delayed_css[self]=delayed_css[self] or system.get_time()+.6
+    if system.get_time()<delayed_css[self] then return end
+  end
+  return notifications(self,...)
+end
 local received={}
+local requests={}
+local request_completion=lsp.request_completion
+lsp.request_completion=function(doc,line,col,forced)
+  local filename=doc.filename or doc.litefront_lsp_filename or 'untitled'
+  local css=lsp.servers_running.vscode_css_ls
+  requests[#requests+1]=filename..' open='..tostring(doc.lsp_open)..' trigger='..tostring(lsp.in_trigger)..' css-ready='..tostring(css and css.initialized)
+  return request_completion(doc,line,col,forced)
+end
 local complete=autocomplete.complete
 autocomplete.complete=function(items,...)
   for label in pairs(items.items or {}) do received[label]=true end
@@ -14,14 +35,18 @@ end
 local function wait_for(predicate,message,timeout)
   local until_time=system.get_time()+(timeout or 12)
   while not predicate() and system.get_time()<until_time do coroutine.yield(.05) end
-  assert(predicate(),message)
+  if not predicate() then error(type(message)=='function' and message() or message) end
 end
 local function query(doc,label,accept,automatic)
   if not automatic then received={} end
   core.root_view:open_doc(doc)
   doc:set_selection(1,#doc.lines[1])
   if not automatic then assert(command.perform('litefront:complete')) end
-  wait_for(function() return received[label] end,'no real completion received for '..label)
+  wait_for(function() return received[label] end,function()
+    local trace={}
+    for i=math.max(1,#requests-8),#requests do trace[#trace+1]=requests[i] end
+    return 'no real completion received for '..label..'\n'..table.concat(trace,'\n')
+  end)
   coroutine.yield(.3)
   assert(autocomplete.is_open(),'completion results did not open the popup')
   local visible=false
@@ -35,7 +60,7 @@ local function query(doc,label,accept,automatic)
     assert(table.concat(doc.lines)~=before,'selecting completion did not insert text')
   else autocomplete.close() end
 end
-local function embedded(text,label,accept_key,saved)
+local function embedded(text,label,accept_key,saved,automatic)
   autocomplete.close();received={}
   local marker=assert(text:find('|',1,true));local before=text:sub(1,marker-1)
   local doc=core.open_doc();core.root_view:open_doc(doc)
@@ -43,9 +68,16 @@ local function embedded(text,label,accept_key,saved)
   doc:text_input(text:sub(1,marker-1)..text:sub(marker+1))
   local _,lines=before:gsub('\n','');local line=lines+1
   local col=#(before:match('([^\n]*)$'))+1
-  if saved then doc:save(os.getenv('LITEFRONT_COMPLETION_PROJECT')..'/embedded.html') end
+  if saved then
+    local path=os.getenv('LITEFRONT_COMPLETION_PROJECT')..'/embedded.html'
+    doc:save(path,path)
+  end
   doc:set_selection(line,col)
-  assert(command.perform('litefront:complete'))
+  if automatic then
+    local word=assert(before:match('([%w_%-]+)$'))
+    doc:remove(line,col-#word,line,col);doc:set_selection(line,col-#word)
+    received={};core.root_view:on_text_input(word)
+  else assert(command.perform('litefront:complete')) end
   wait_for(function() return received[label] end,'no embedded CSS completion received for '..label)
   coroutine.yield(.3)
   local visible=false
@@ -55,7 +87,7 @@ local function embedded(text,label,accept_key,saved)
     local count=#doc.lines
     assert(keymap.on_key_pressed(accept_key),'completion key was not handled: '..accept_key)
     assert(#doc.lines==count,'accepting completion inserted a newline')
-    assert(table.concat(doc.lines):find(label,1,true),'completion key did not insert the CSS property')
+    assert(table.concat(doc.lines):find(label,1,true),'completion key '..accept_key..' did not insert the CSS property: '..table.concat(doc.lines))
   else autocomplete.close() end
   assert(saved or not doc.filename,'embedded CSS completion saved an untitled buffer')
   return doc
@@ -109,6 +141,16 @@ core.add_thread(function()
     embedded('<html><head><style>\nbody { background-col| }\n</style></head></html>','background-color','tab')
     embedded('<div style="background-col|"></div>','background-color','return')
     embedded('<style>\nbody { background-col| }\n</style>','background-color','keypad enter',true)
+    embedded('<style>\nbody { background-col| }\n</style>','background-color','tab',false,true)
+    embedded('<div style="display: inline-fl|"></div>','inline-flex','return')
+    -- A minus sign inside JavaScript remains an operator, including in HTML.
+    local script=core.open_doc();core.root_view:open_doc(script)
+    workspace.set_language(script,syntax.get('embedded-script.html'))
+    script:text_input('<script>let result = foo-ba')
+    autocomplete.complete{name='script-test',items={bar=true}}
+    assert(autocomplete.is_open(),'HTML CSS matching changed embedded JavaScript word boundaries')
+    assert(keymap.on_key_pressed('return'))
+    assert(table.concat(script.lines):find('foo-bar',1,true),'embedded JavaScript completion replaced the subtraction expression')
     -- A previously saved JavaScript file works without opening a project.
     query(core.open_doc(root..'/saved.js'),'log')
     -- A new unsaved tab selects a language without gaining a saved filename.
@@ -128,6 +170,7 @@ core.add_thread(function()
     css:text_input('body { dis')
     css:save(root..'/new.css',root..'/new.css')
     query(css,'display')
+    assert(next(delayed_css),'delayed CSS startup was not exercised')
     local ts=core.open_doc();core.root_view:open_doc(ts)
     workspace.set_language(ts,syntax.get('buffer.ts'))
     core.root_view:on_text_input('new Date().')

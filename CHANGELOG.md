@@ -1,5 +1,23 @@
 # Changelog
 
+## Jotta Text v0.5.31 — 2026-11-15
+
+- Fix GitHub builds: use the pinned Lua runtime for native/AppImage builds,
+  normalize engine patches and fetched sources to LF on Windows, and check
+  required source files before starting platform jobs. Remove the accidental
+  nested clone from tracking while preserving its local files.
+- Restore every cursor and selection direction, the primary cursor, and both
+  scroll positions for saved and untitled documents. Include viewport/cursor
+  changes in periodic recovery and retain compatibility with earlier snapshots.
+- Accept completion with Tab, Enter and keypad Enter while preserving normal
+  indentation, newlines, HTML starter expansion and snippet navigation.
+- Keep hyphenated CSS properties/values and HTML attributes together when matching
+  suggestions, including CSS in style blocks and inline style attributes. Enable
+  embedded HTML language services explicitly and ignore completions from inactive
+  documents. Preserve JavaScript subtraction boundaries inside script blocks.
+- Test actual editor restarts and real bundled language servers on native Linux
+  and Flatpak; add both regressions to the GitHub build workflow.
+
 ## Jotta Text v0.5.30 — 2026-11-15
 
 - Replace terminal-only GitHub setup with browser sign-in, a local folder chooser

@@ -1,4 +1,6 @@
 dist/
+# Local clone of this project; it is not a source dependency or submodule.
+/Jotta-Text/
 .agents/
 .codex/
 .aws/

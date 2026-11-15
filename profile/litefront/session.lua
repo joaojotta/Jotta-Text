@@ -27,7 +27,10 @@ function M.save()
         seen[doc]=true
         local item={filename=doc.abs_filename,dirty=doc:is_dirty(),
           language=doc.litefront_language and doc.litefront_language.name,
-          selection={doc:get_selection()},crlf=doc.crlf,source=require('plugins.litefront_media').kind(doc.abs_filename)~=nil}
+          selection={doc:get_selection()},selections={table.unpack(doc.selections)},last_selection=doc.last_selection,
+          crlf=doc.crlf,source=require('plugins.litefront_media').kind(doc.abs_filename)~=nil}
+        local position_view=active and active.doc==doc and active or view
+        item.scroll={x=position_view.scroll.to.x/SCALE,line=position_view.scroll.to.y/position_view:get_line_height()}
         if item.dirty or not item.filename then item.text=table.concat(doc.lines) end
         state.documents[#state.documents+1]=item
         if active and active.doc==doc then state.active=#state.documents end
@@ -59,7 +62,7 @@ function M.start_recovery()
       local function visit(node)
         if node.a then visit(node.a);visit(node.b);return end
         for _,view in ipairs(not node.locked and node.views or {}) do
-          if view.doc then parts[#parts+1]=tostring(view.doc)..':'..view.doc:get_change_id()..':'..tostring(view.doc.abs_filename)..':'..tostring(view.doc:is_dirty())..':'..(view.doc.litefront_recovery_generation or 0)..':'..tostring(view.doc.litefront_language)..':'..table.concat({view.doc:get_selection()},',')
+          if view.doc then parts[#parts+1]=tostring(view.doc)..':'..view.doc:get_change_id()..':'..tostring(view.doc.abs_filename)..':'..tostring(view.doc:is_dirty())..':'..(view.doc.litefront_recovery_generation or 0)..':'..tostring(view.doc.litefront_language)..':'..table.concat(view.doc.selections,',')..':'..tostring(view.doc.last_selection)..':'..view.scroll.to.x..':'..view.scroll.to.y
           elseif view.litefront_media then parts[#parts+1]=view.filename end
         end
       end
@@ -167,7 +170,32 @@ function M.restore()
         require('plugins.litefront_workspace').set_language(doc,language)
       end
       if item.selection then doc:set_selection(table.unpack(item.selection)) end
+      if type(item.selections)=='table' and #item.selections>=4 and #item.selections%4==0 then
+        local valid=true
+        for _,value in ipairs(item.selections) do
+          if type(value)~='number' or value~=value or value<1 or value==math.huge or value%1~=0 then valid=false;break end
+        end
+        if valid then
+          doc.selections={}
+          for index=1,#item.selections,4 do
+            doc:set_selections((index+3)/4,table.unpack(item.selections,index,index+3))
+          end
+          doc.last_selection=type(item.last_selection)=='number' and item.last_selection==item.last_selection
+            and common.clamp(math.floor(item.last_selection),1,#doc.selections/4) or 1
+        end
+      end
       local view=core.root_view:open_doc(doc)
+      if type(item.scroll)=='table' then
+        local function finite(value) return type(value)=='number' and value==value and value>=0 and value<math.huge end
+        if finite(item.scroll.x) then view.scroll.x=math.min(item.scroll.x*SCALE,1e7);view.scroll.to.x=view.scroll.x end
+        if finite(item.scroll.line) then
+          view.scroll.y=common.clamp(item.scroll.line*view:get_line_height(),0,math.max(0,view:get_scrollable_size()-view.size.y))
+          view.scroll.to.y=view.scroll.y
+        end
+        -- The first update must not treat the restored caret as a new move and
+        -- replace the saved viewport. Subsequent user movement scrolls normally.
+        view.last_line1,view.last_col1,view.last_line2,view.last_col2=doc:get_selection()
+      end
       if i==state.active then selected=view end
     end)
     if not success then core.error('Could not restore document: %s',err) end

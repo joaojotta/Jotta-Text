@@ -33,7 +33,7 @@ def main():
         revision=json.loads((ROOT/'tools/lite-xl-files.json').read_text())['commit']
         run('git','init',str(upstream))
         run('git','-C',str(upstream),'fetch','--depth=1','https://github.com/lite-xl/lite-xl.git',revision)
-        run('git','-C',str(upstream),'checkout','--detach','FETCH_HEAD')
+        run('git','-C',str(upstream),'-c','core.autocrlf=false','-c','core.eol=lf','checkout','--detach','FETCH_HEAD')
     run(sys.executable,str(ROOT/'tools/apply-lite-xl-patch.py'))
     for repo in LOCK['repositories']:
         dest = BASE / repo['path']
@@ -44,7 +44,7 @@ def main():
             run('git', 'init', str(dest))
             run('git', '-C', str(dest), 'remote', 'add', 'origin', repo['url'])
             run('git', '-C', str(dest), 'fetch', '--depth=1', 'origin', repo['commit'])
-            run('git', '-C', str(dest), 'checkout', '--detach', 'FETCH_HEAD')
+            run('git', '-C', str(dest), '-c', 'core.autocrlf=false', '-c', 'core.eol=lf', 'checkout', '--detach', 'FETCH_HEAD')
         actual = subprocess.check_output(['git', '-C', str(dest), 'rev-parse', 'HEAD'], text=True).strip()
         if actual != repo['commit']:
             raise SystemExit(f'Source revision mismatch: {dest}')

@@ -4,8 +4,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 python3 tools/fetch-dependencies.py "$@"
 python3 tools/build-app-icons.py
+if [[ " ${*:-} " != *" --offline "* ]]; then meson subprojects download --sourcedir vendor/lite-xl; fi
 mkdir -p dist/native/bin
-setup_args=(dist/native-build vendor/lite-xl --buildtype=release --wrap-mode=nodownload -Dportable=false -Duse_system_lua=true --prefix="$ROOT/dist/native")
+# Use the pinned Lua runtime: distribution builds can omit symbols exported by
+# Lite XL's native API even when their reported Lua version matches.
+setup_args=(dist/native-build vendor/lite-xl --buildtype=release --wrap-mode=nodownload -Dportable=false -Duse_system_lua=false --prefix="$ROOT/dist/native")
 if [[ -f dist/native-build/meson-private/coredata.dat ]]; then
   meson setup --reconfigure "${setup_args[@]}"
 else

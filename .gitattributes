@@ -1,0 +1,12 @@
+# Source and engine patches must have identical bytes on every build runner.
+* text=auto eol=lf
+*.patch text eol=lf
+*.sh text eol=lf
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

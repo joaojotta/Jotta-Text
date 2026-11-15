@@ -39,4 +39,10 @@ command.add(can_expand,{
     snippets.execute({format='lsp',template=template:gsub('\t',indent)},doc)
   end,
 })
-keymap.add {['tab']='litefront:expand-html-template'}
+-- Keep HTML starter expansion first, then accept an open completion popup.
+-- Closed popups fall through to snippet navigation, indentation and newlines.
+keymap.add {
+  ['tab']={'litefront:expand-html-template','autocomplete:complete'},
+  ['return']='autocomplete:complete',
+  ['keypad enter']='autocomplete:complete',
+}

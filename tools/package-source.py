@@ -6,7 +6,7 @@ import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-FILES = ('.gitignore', 'README.md', 'BUILD_UBUNTU.md', 'BUILD_WINDOWS.md',
+FILES = ('.gitignore', '.gitattributes', 'README.md', 'BUILD_UBUNTU.md', 'BUILD_WINDOWS.md',
          'PUBLISHING.md', 'GITHUB_TRIAL.md', 'CHANGELOG.md', 'VERSION',
          'vendor/litefront/tooling/package.json',
          'vendor/litefront/tooling/package-lock.json')

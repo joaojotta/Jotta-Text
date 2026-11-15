@@ -1,4 +1,4 @@
-# Jotta Text v0.5.30
+# Jotta Text v0.5.31
 
 Jotta Text continues JottaXL and LiteFront, carrying forward their features and settings.
 See [CHANGELOG.md](CHANGELOG.md) for this cumulative release.
@@ -65,7 +65,8 @@ filenames, source code and internal command IDs remain unchanged.
 
 Starting Jotta Text restores the documents left open at exit, including untitled
 files and unsaved edits, without writing those edits to the source files. Tab
-order, the active document, selection and manually chosen languages are retained.
+order, the active document, all cursors/selections and manually chosen languages
+are retained. Both scroll positions are restored too, including in untitled tabs.
 Recovery snapshots are written after two seconds of idle time and at least every
 15 seconds during continuous editing, protecting unsaved work after a crash.
 Snapshots only update application recovery data; source files are left untouched.
@@ -113,8 +114,12 @@ files or files with unrecognized extensions. Explicit language choices take prio
 HTML, CSS, JSON, JavaScript, JSX, TypeScript and TSX completion also works in an
 untitled tab after choosing its language. Suggestions appear while typing; use
 `Ctrl+Space` to request them and Tab/Enter to accept a suggestion. Saving a new
-file starts its language server automatically. Untitled completion uses an
-in-memory document identity and does not save a hidden copy of your work.
+file starts its language server automatically. CSS properties and values also
+complete inside HTML `<style>` blocks and inline `style` attributes, including
+hyphenated names such as `background-color` and `inline-flex`. Keypad Enter also
+accepts suggestions; without a popup, Tab/Enter keep their normal behavior.
+Untitled completion uses an in-memory document identity and does not save a
+hidden copy of your work.
 
 In an HTML file or an untitled tab set to HTML, type `!` on a blank line and
 press Tab to insert an HTML5 starter. Tab moves through the language and page
@@ -327,7 +332,8 @@ No installer or separately installed Node is needed. To build it yourself, use
 ## Run the native build
 
 Build prerequisites: Python 3, Git, npm, Meson, Ninja, a C compiler, pkg-config,
-Pillow, `rsvg-convert`, and development packages for SDL2, FreeType, HarfBuzz, PCRE2, Lua 5.4, GLib/GIO, librsvg, libwebp and libtiff.
+Pillow, `rsvg-convert`, and development packages for SDL2, FreeType, HarfBuzz, PCRE2, GLib/GIO, librsvg, libwebp and libtiff.
+The build includes the pinned Lua runtime instead of the distribution Lua library.
 Internet access is needed once to fetch pinned build dependencies.
 
 ```bash
@@ -354,7 +360,7 @@ Use the native build prerequisites listed above, plus `ldd` and `sha256sum`:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.5.30-x86_64.AppImage (on an x86_64 host)
+# Output: dist/JottaText-0.5.31-x86_64.AppImage (on an x86_64 host)
 ```
 
 The script builds the editor and packages its native libraries, fonts, Node and
@@ -368,9 +374,9 @@ Nothing is installed; the executable and its SHA-256 checksum are written to
 Run the resulting file directly:
 
 ```bash
-./dist/JottaText-0.5.30-x86_64.AppImage
+./dist/JottaText-0.5.31-x86_64.AppImage
 # Without FUSE:
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.30-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.31-x86_64.AppImage
 ```
 
 The AppImage shares the native application's `~/.config/litefront` settings and
@@ -378,7 +384,7 @@ session. Close any running native instance before switching builds. The system
 still supplies glibc, graphics drivers and desktop services. Bundling libraries
 does not lower their glibc requirement: build on the oldest Linux distribution
 you intend to support. This source build is not a universal Linux binary.
-The v0.5.30 x86_64 artifact built on this Arch system requires **glibc 2.44 or
+The v0.5.31 x86_64 artifact built on this Arch system requires **glibc 2.43 or
 newer**. Its packaging and editor smoke checks passed on this host; other
 distributions and aarch64 have not been tested.
 

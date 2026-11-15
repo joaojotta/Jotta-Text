@@ -46,6 +46,8 @@ lsp.add_server {
 }
 local lspconfig=require 'plugins.lsp.config'
 lspconfig.vscode_html_ls.setup {command=tool('vscode-html-language-server','--stdio'),
+  init_options={embeddedLanguages={css=true,javascript=true}},
+  settings={css={completion={completePropertyWithSemicolon=true,triggerPropertyValueCompletion=true}}},
   file_patterns={'%.[hH][tT][mM][lL]?$','%.[xX][hH][tT][mM][lL]$'}}
 lspconfig.vscode_css_ls.setup {
   command=tool('vscode-css-language-server','--stdio'),

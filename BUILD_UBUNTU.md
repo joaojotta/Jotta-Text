@@ -9,7 +9,7 @@ Users do not install plugins or run a profile setup after installation.
 ```bash
 sudo apt update
 sudo apt install -y build-essential pkg-config git python3 python3-pil librsvg2-bin nodejs npm meson ninja-build \
-  libsdl2-dev libfreetype6-dev libharfbuzz-dev libpcre2-dev liblua5.4-dev libglib2.0-dev librsvg2-dev libwebp-dev libtiff-dev
+  libsdl2-dev libfreetype6-dev libharfbuzz-dev libpcre2-dev libglib2.0-dev librsvg2-dev libwebp-dev libtiff-dev
 bash scripts/build-native.sh
 bash scripts/run-native.sh
 ```
@@ -18,6 +18,10 @@ The native launcher is `dist/native/bin/jotta-text` (`jottaxl` and `litefront` r
 directory together. The first build downloads pinned source dependencies and a
 checksum-verified Node runtime. Subsequent builds can use
 `bash scripts/build-native.sh --offline` with the populated dependency cache.
+
+Lua is built from the pinned Meson source dependency and linked into the editor.
+The build does not depend on a distribution Lua library exporting every symbol
+needed by the editor's native API.
 
 The desktop must provide `xdg-desktop-portal` and a backend appropriate to the
 desktop, such as `xdg-desktop-portal-gnome`, `xdg-desktop-portal-kde` or
@@ -29,7 +33,7 @@ With the native prerequisites above installed:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.5.30-x86_64.AppImage (or aarch64 on that architecture)
+# Output: dist/JottaText-0.5.31-x86_64.AppImage (or aarch64 on that architecture)
 python3 tests/test-appimage.py
 ```
 

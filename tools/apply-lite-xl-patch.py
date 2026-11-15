@@ -16,7 +16,9 @@ changed=[name for name,info in manifest['files'].items() if digest(source/name)!
 if changed:
     raise SystemExit('Engine files differ from the recorded patch: '+', '.join(changed)+
         '. Preserve intentional edits with python3 tools/refresh-lite-xl-patch.py before rebuilding.')
-subprocess.run(['git','apply','--whitespace=nowarn',str(ROOT/'tools/lite-xl.patch')],cwd=source,check=True)
+patch=(ROOT/'tools/lite-xl.patch').read_bytes().replace(b'\r\n',b'\n')
+subprocess.run(['git','-c','core.autocrlf=false','-c','core.eol=lf','apply','--whitespace=nowarn','-'],
+               cwd=source,input=patch,check=True)
 if not all(digest(source/name)==info['after'] for name,info in manifest['files'].items()):
     raise SystemExit('Engine patch verification failed')
 print('Applied and verified Jotta Text engine patches')
