@@ -140,7 +140,7 @@ function M.open(view,line,hit)
   sync()
 end
 function M.at_cursor()
-  local view=require('litefront.visual').document_view()
+  local view=visual.document_view()
   if not view then return end
   local line,col=view.doc:get_selection()
   for _,hit in ipairs(inline.hits(view.doc,line)) do if col>=hit.start and col<=hit.finish then M.open(view,line,hit);return end end

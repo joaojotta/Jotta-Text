@@ -10,7 +10,7 @@ UPSTREAM = ROOT / 'vendor/lite-xl'
 DEPS = ROOT / 'vendor/litefront'
 IGNORE = shutil.ignore_patterns('.git', '__pycache__', 'screenshots', 'node_modules')
 DESTINATION_NAMES = ('lite-xl', 'app-data', 'data')
-VERSION_PATTERN = r'\d+\.\d+(?:\.\d+)?'
+VERSION_PATTERN = r'\d+\.\d+\.\d+'
 SAVE_SESSION = ("  local ok,err=require('litefront.session').save()\n"
                 "  if not ok then core.error('Could not preserve open documents: %s',err);return end\n")
 

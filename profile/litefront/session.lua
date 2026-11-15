@@ -13,6 +13,7 @@ function M.save()
   state.explorer={visible=explorer.visible,mode=explorer.mode or 'explorer',width=explorer.width/SCALE,expanded=explorer.expanded,
     selected=row and row.path,scroll=explorer.scroll.to.y/SCALE}
   local active=require('litefront.visual').document_view()
+  local DocView=require 'core.docview'
   local seen={}
   local function visit(node)
     if node.a then visit(node.a);visit(node.b);return end
@@ -23,7 +24,7 @@ function M.save()
         state.documents[#state.documents+1]={filename=view.filename,media=view.litefront_media,zoom=view.zoom,
           font_size=view.font_size,weight=view.weight,sample=view.sample}
         if core.active_view==view or (core.active_view==core.command_view and core.last_active_view==view) then state.active=#state.documents end
-      elseif doc and view:is(require 'core.docview') and not seen[doc] then
+      elseif doc and view:is(DocView) and not seen[doc] then
         seen[doc]=true
         local item={filename=doc.abs_filename,dirty=doc:is_dirty(),
           language=doc.litefront_language and doc.litefront_language.name,
@@ -62,8 +63,17 @@ function M.start_recovery()
       local function visit(node)
         if node.a then visit(node.a);visit(node.b);return end
         for _,view in ipairs(not node.locked and node.views or {}) do
-          if view.doc then parts[#parts+1]=tostring(view.doc)..':'..view.doc:get_change_id()..':'..tostring(view.doc.abs_filename)..':'..tostring(view.doc:is_dirty())..':'..(view.doc.litefront_recovery_generation or 0)..':'..tostring(view.doc.litefront_language)..':'..table.concat(view.doc.selections,',')..':'..tostring(view.doc.last_selection)..':'..view.scroll.to.x..':'..view.scroll.to.y
-          elseif view.litefront_media then parts[#parts+1]=view.filename end
+          local doc=view.doc
+          if doc then
+            parts[#parts+1]=table.concat({
+              tostring(doc),doc:get_change_id(),tostring(doc.abs_filename),tostring(doc:is_dirty()),
+              doc.litefront_recovery_generation or 0,tostring(doc.litefront_language),
+              table.concat(doc.selections,','),tostring(doc.last_selection),
+              view.scroll.to.x,view.scroll.to.y,
+            },':')
+          elseif view.litefront_media then
+            parts[#parts+1]=view.filename
+          end
         end
       end
       visit(core.root_view.root_node)

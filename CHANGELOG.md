@@ -1,5 +1,23 @@
 # Changelog
 
+## Jotta Text v0.6.0 — 2026-11-15
+
+No visible or behavioural changes to the editor; this release fixes the Windows
+build and tidies the build tooling.
+
+- Read and write bundled sources as UTF-8 on Windows. The portable build stopped
+  while preparing application data because Python used the cp1252 locale.
+- Make every upstream patch in `tools/prepare-bundle.py` fail loudly when its
+  anchor is missing, group patches per file and read the engine version from
+  the pinned Lite XL source. Remove one patch that never applied.
+- Stop the build when a bundled source checkout under `vendor/litefront` has
+  local edits, so packages always match what GitHub builds.
+- Share version, prerequisite, offline and Meson setup handling between build
+  scripts in `scripts/lib.sh`; every package now requires MAJOR.MINOR.PATCH.
+- Keep Python, Node and pip pins in one place in the GitHub workflow.
+- Add `.editorconfig`; remove redundant Lua `require` calls and split an
+  overlong recovery fingerprint expression.
+
 ## Jotta Text v0.5.33 — 2026-11-15
 
 - Apply the minimap top inset, Markdown preview for any Markdown-syntax buffer

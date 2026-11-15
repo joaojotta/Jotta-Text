@@ -13,10 +13,10 @@ local function is_markdown(view)
 end
 
 local function theme(name)
-  require('litefront.visual').syntax_theme='auto'
-  require('litefront.visual').ui_theme='auto'
+  visual.syntax_theme='auto'
+  visual.ui_theme='auto'
   core.reload_module('colors.litefront_' .. name)
-  require('litefront.visual').save_appearance()
+  visual.save_appearance()
   core.redraw = true
   core.log('Jotta Text theme: %s', name)
 end
