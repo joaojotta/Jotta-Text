@@ -10,7 +10,7 @@ FILES = ('.gitignore', '.gitattributes', 'README.md', 'BUILD_UBUNTU.md', 'BUILD_
          'PUBLISHING.md', 'GITHUB_TRIAL.md', 'CHANGELOG.md', 'VERSION',
          'vendor/litefront/tooling/package.json',
          'vendor/litefront/tooling/package-lock.json')
-DIRECTORIES = ('.github', 'example', 'flatpak', 'fonts', 'icons', 'profile',
+DIRECTORIES = ('.github', 'docs', 'example', 'flatpak', 'fonts', 'icons', 'profile',
                'scripts', 'tests', 'tools', 'web')
 
 def main():

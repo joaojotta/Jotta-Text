@@ -97,7 +97,7 @@ the local browser preview. Run build scripts without `sudo`.
 
 ## Verification
 
-Run the commands in the README after a native build. The automated checks cover
+Run the [development checks](docs/DEVELOPMENT.md#development-checks) after a native build. The automated checks cover
 startup, themes/menus, the bundled formatter and Markdown renderer, system-dialog
 responses, and the localhost preview. A manual desktop pass is still useful for
 checking appearance and the host's actual GNOME/KDE chooser.

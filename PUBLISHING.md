@@ -41,7 +41,7 @@ files are present and no local clone has been added as an unconfigured submodule
 Keep `.gitattributes` in the repository so Windows checks out patches with LF
 line endings.
 Third-party source and asset license notices are preserved in the source and
-redistributable packages; see the README's Third-party code section.
+redistributable packages; see [Credits and licenses](README.md#credits-and-licenses).
 
 ## Build the downloadable packages
 

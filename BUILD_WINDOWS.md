@@ -43,6 +43,6 @@ unsaved formatting and restarts to verify snapshot replacement and recovery.
 The local cross-built package was tested under Wine; GitHub Actions builds and
 tests on a Windows runner. Native chooser appearance still needs a manual check.
 
-The optional GitHub trial additionally requires Git for Windows in PATH and
-your existing Git credential setup. It is disabled by default and is separate
-from the bundled editor tools; see [GITHUB_TRIAL.md](GITHUB_TRIAL.md).
+The optional GitHub trial additionally requires Git for Windows in PATH.
+Browser sign-in uses the bundled GitHub CLI. The trial is disabled by default;
+see [GITHUB_TRIAL.md](GITHUB_TRIAL.md).
