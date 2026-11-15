@@ -53,7 +53,7 @@ Use the native build prerequisites listed above, plus `ldd` and `sha256sum`:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.5.32-x86_64.AppImage (on an x86_64 host)
+# Output: dist/JottaText-0.5.33-x86_64.AppImage (on an x86_64 host)
 ```
 
 The script builds the editor and packages its native libraries, fonts, Node and
@@ -67,9 +67,9 @@ Nothing is installed; the executable and its SHA-256 checksum are written to
 Run the resulting file directly:
 
 ```bash
-./dist/JottaText-0.5.32-x86_64.AppImage
+./dist/JottaText-0.5.33-x86_64.AppImage
 # Without FUSE:
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.32-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/JottaText-0.5.33-x86_64.AppImage
 ```
 
 The AppImage shares the native application's `~/.config/litefront` settings and
@@ -77,7 +77,7 @@ session. Close any running native instance before switching builds. The system
 still supplies glibc, graphics drivers and desktop services. Bundling libraries
 does not lower their glibc requirement: build on the oldest Linux distribution
 you intend to support. This source build is not a universal Linux binary.
-The v0.5.32 x86_64 artifact built on this Arch system requires **glibc 2.43 or
+The v0.5.33 x86_64 artifact built on this Arch system requires **glibc 2.43 or
 newer**. Its packaging and editor smoke checks passed on this host; other
 distributions and aarch64 have not been tested.
 

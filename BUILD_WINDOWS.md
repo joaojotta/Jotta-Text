@@ -22,7 +22,7 @@ bash scripts/build-windows.sh
 python tests/test-windows.py
 ```
 
-Output: `dist/JottaText-0.5.32-windows-x64-portable.zip` and its SHA-256 checksum.
+Output: `dist/JottaText-0.5.33-windows-x64-portable.zip` and its SHA-256 checksum.
 The build script installs nothing. Source and npm dependencies are pinned; the
 build uses the installed UCRT64 library versions and collects their imported
 DLLs and notices. Later builds can use `--offline` after all source, Meson and

@@ -1,5 +1,15 @@
 # Changelog
 
+## Jotta Text v0.5.33 — 2026-11-15
+
+- Apply the minimap top inset, Markdown preview for any Markdown-syntax buffer
+  (without forcing a save) and LSP hover suppression over inline colours during
+  bundling. These changes previously existed only in local vendor checkouts, so
+  GitHub-built packages lacked them and the AppImage visuals test failed.
+- Download Windows Meson subprojects serially; MSYS2 Meson aborted parallel
+  downloads with "Resource deadlock avoided".
+- Mark every build script executable.
+
 ## Jotta Text v0.5.32 — 2026-11-15
 
 - Invoke npm's JavaScript entry point through Node so the Windows/MSYS2 bootstrap
