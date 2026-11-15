@@ -35,6 +35,31 @@ local function query(doc,label,accept,automatic)
     assert(table.concat(doc.lines)~=before,'selecting completion did not insert text')
   else autocomplete.close() end
 end
+local function embedded(text,label,accept_key,saved)
+  autocomplete.close();received={}
+  local marker=assert(text:find('|',1,true));local before=text:sub(1,marker-1)
+  local doc=core.open_doc();core.root_view:open_doc(doc)
+  workspace.set_language(doc,syntax.get('embedded.html'))
+  doc:text_input(text:sub(1,marker-1)..text:sub(marker+1))
+  local _,lines=before:gsub('\n','');local line=lines+1
+  local col=#(before:match('([^\n]*)$'))+1
+  if saved then doc:save(os.getenv('LITEFRONT_COMPLETION_PROJECT')..'/embedded.html') end
+  doc:set_selection(line,col)
+  assert(command.perform('litefront:complete'))
+  wait_for(function() return received[label] end,'no embedded CSS completion received for '..label)
+  coroutine.yield(.3)
+  local visible=false
+  for _,set in pairs(autocomplete.map_manually) do for _,item in ipairs(set.items) do if item.text==label then visible=true end end end
+  assert(visible,'another provider replaced embedded CSS suggestions: '..label)
+  if accept_key then
+    local count=#doc.lines
+    assert(keymap.on_key_pressed(accept_key),'completion key was not handled: '..accept_key)
+    assert(#doc.lines==count,'accepting completion inserted a newline')
+    assert(table.concat(doc.lines):find(label,1,true),'completion key did not insert the CSS property')
+  else autocomplete.close() end
+  assert(saved or not doc.filename,'embedded CSS completion saved an untitled buffer')
+  return doc
+end
 core.add_thread(function()
   coroutine.yield(.1)
   local ok,err=pcall(function()
@@ -70,6 +95,20 @@ core.add_thread(function()
     workspace.set_language(ordinary,syntax.get('ordinary.html'))
     assert(keymap.on_key_pressed('tab'))
     assert(ordinary.lines[1]:match('^ +\n$'),'ordinary HTML indentation changed')
+    -- The actual key bindings must accept the highlighted suggestion rather
+    -- than inserting indentation/newlines, with normal behavior when closed.
+    for _,key in ipairs({'tab','return','keypad enter'}) do
+      local test=core.open_doc();core.root_view:open_doc(test);test:text_input('back')
+      autocomplete.complete{name='key-test',items={['background-color']=true}}
+      assert(keymap.on_key_pressed(key))
+      assert(table.concat(test.lines)=='background-color\n','completion was not accepted by '..key)
+      assert(not autocomplete.is_open(),'accepted completion stayed open')
+    end
+    local newline=core.open_doc();core.root_view:open_doc(newline)
+    assert(keymap.on_key_pressed('return') and #newline.lines==2,'Enter lost its normal newline behavior')
+    embedded('<html><head><style>\nbody { background-col| }\n</style></head></html>','background-color','tab')
+    embedded('<div style="background-col|"></div>','background-color','return')
+    embedded('<style>\nbody { background-col| }\n</style>','background-color','keypad enter',true)
     -- A previously saved JavaScript file works without opening a project.
     query(core.open_doc(root..'/saved.js'),'log')
     -- A new unsaved tab selects a language without gaining a saved filename.
