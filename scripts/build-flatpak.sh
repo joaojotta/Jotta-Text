@@ -3,21 +3,12 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-APP_VERSION="$(tr -d '\r\n' < VERSION)"
-if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-  echo 'Invalid application VERSION.' >&2
-  exit 1
-fi
-command -v flatpak >/dev/null || { echo 'Install flatpak first.' >&2; exit 1; }
-command -v flatpak-builder >/dev/null || { echo 'Install flatpak-builder first.' >&2; exit 1; }
-command -v git >/dev/null || { echo 'Install git first.' >&2; exit 1; }
-command -v meson >/dev/null || { echo 'Meson is required on the host to prefetch dependencies.' >&2; echo 'Ubuntu: sudo apt install meson' >&2; exit 1; }
+source scripts/lib.sh
+read_app_version
+require_commands 'See BUILD_UBUNTU.md.' flatpak flatpak-builder git meson python3
 # Build prerequisites must already be installed. Never change Flatpak installations here.
 for dependency in org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08; do
-  if ! flatpak info "$dependency" >/dev/null 2>&1; then
-    printf 'Missing build prerequisite: %s. See BUILD_UBUNTU.md.\n' "$dependency" >&2
-    exit 1
-  fi
+  flatpak info "$dependency" >/dev/null 2>&1 || die "Missing build prerequisite: $dependency. See BUILD_UBUNTU.md."
 done
 mkdir -p vendor dist
 python3 tools/fetch-dependencies.py "$@"
@@ -31,19 +22,16 @@ python3 tools/prepare-bundle.py dist/jotta-text-stage/app-data
 # wraps would otherwise try to download Lua/SDL2/PCRE2/FreeType *inside* the
 # build sandbox and fail with a DNS/connection error. Download them on the host
 # first; Meson will reuse these subprojects during Flatpak compilation.
-if [[ " $* " == *" --offline "* ]]; then
+if is_offline "$@"; then
   printf '\nUsing cached Lite XL Meson dependencies (offline).\n'
 else
   printf '\nFetching Lite XL Meson dependencies on the host...\n'
-  meson subprojects download --sourcedir vendor/lite-xl
+  download_meson_subprojects
 fi
 flatpak-builder --subject="Jotta Text v$APP_VERSION" --user --force-clean --disable-download --disable-rofiles-fuse --repo=dist/flatpak-repo \
   dist/build flatpak/io.github.joaojotta.JottaText.json
 BUILT_VERSION="$(tr -d '\r\n' < dist/build/files/share/lite-xl/litefront/VERSION)"
-if [[ "$BUILT_VERSION" != "$APP_VERSION" ]]; then
-  printf 'Refusing to bundle stale application: expected %s, built %s.\n' "$APP_VERSION" "$BUILT_VERSION" >&2
-  exit 1
-fi
+[[ "$BUILT_VERSION" == "$APP_VERSION" ]] || die "Refusing to bundle stale application: expected $APP_VERSION, built $BUILT_VERSION."
 rm -f dist/JottaText.flatpak.tmp
 flatpak build-bundle dist/flatpak-repo dist/JottaText.flatpak.tmp io.github.joaojotta.JottaText master
 mv -f dist/JottaText.flatpak.tmp dist/JottaText.flatpak

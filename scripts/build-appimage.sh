@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib.sh
 OFFLINE=false
 NO_BUILD=false
 for argument in "$@"; do
@@ -15,24 +16,21 @@ for argument in "$@"; do
       printf '  --offline   Use cached editor dependencies and verified AppImage tools only.\n'
       printf '  --no-build  Package an already-built dist/native with a matching VERSION.\n'
       exit 0 ;;
-    *) printf 'Unknown option: %s\n' "$argument" >&2;exit 1 ;;
+    *) die "Unknown option: $argument" ;;
   esac
 done
-APP_VERSION="$(tr -d '\r\n' < VERSION)"
-[[ "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid VERSION.' >&2;exit 1; }
+read_app_version
 APP_ARCH="$(uname -m)"
-case "$APP_ARCH" in x86_64|aarch64) ;; *) printf 'Unsupported AppImage architecture: %s\n' "$APP_ARCH" >&2;exit 1 ;; esac
-for dependency in python3 ldd; do
-  command -v "$dependency" >/dev/null || { printf 'Missing prerequisite: %s\n' "$dependency" >&2;exit 1; }
-done
+case "$APP_ARCH" in x86_64|aarch64) ;; *) die "Unsupported AppImage architecture: $APP_ARCH" ;; esac
+require_commands '' python3 ldd
 BUILD_ARGS=()
 if "$OFFLINE"; then BUILD_ARGS+=(--offline); fi
 python3 tools/fetch-appimage-tools.py --arch "$APP_ARCH" "${BUILD_ARGS[@]}"
 if ! "$NO_BUILD"; then bash scripts/build-native.sh "${BUILD_ARGS[@]}"; fi
 BUILT_VERSION="$(tr -d '\r\n' < dist/native/share/lite-xl/litefront/VERSION)"
-[[ "$BUILT_VERSION" == "$APP_VERSION" ]] || { printf 'Refusing to package stale native data: expected %s, found %s. Run without --no-build.\n' "$APP_VERSION" "$BUILT_VERSION" >&2;exit 1; }
+[[ "$BUILT_VERSION" == "$APP_VERSION" ]] || die "Refusing to package stale native data: expected $APP_VERSION, found $BUILT_VERSION. Run without --no-build."
 for file in bin/lite-xl bin/jotta-text bin/litefront-file-dialog share/lite-xl/litefront/node/node; do
-  [[ -x "dist/native/$file" ]] || { printf 'Missing native executable: %s. Run without --no-build.\n' "$file" >&2;exit 1; }
+  [[ -x "dist/native/$file" ]] || die "Missing native executable: $file. Run without --no-build."
 done
 APPDIR="$ROOT/dist/JottaText.AppDir"
 TOOLS="$ROOT/vendor/appimage-tools/$APP_ARCH"
@@ -57,7 +55,8 @@ install -m644 "$APPDIR/usr/share/icons/hicolor/256x256/apps/io.github.joaojotta.
   "$APPDIR/io.github.joaojotta.JottaText.png"
 ln -sfn io.github.joaojotta.JottaText.png "$APPDIR/.DirIcon"
 # Recheck the version after deployment and give the image an explicit, stable name.
-[[ "$(tr -d '\r\n' < "$APPDIR/usr/share/lite-xl/litefront/VERSION")" == "$APP_VERSION" ]]
+[[ "$(tr -d '\r\n' < "$APPDIR/usr/share/lite-xl/litefront/VERSION")" == "$APP_VERSION" ]] \
+  || die 'AppDir version changed during deployment.'
 OUTPUT="$ROOT/dist/JottaText-$APP_VERSION-$APP_ARCH.AppImage"
 rm -f "$OUTPUT.tmp"
 ARCH="$APP_ARCH" VERSION="$APP_VERSION" APPIMAGE_EXTRACT_AND_RUN=1 \

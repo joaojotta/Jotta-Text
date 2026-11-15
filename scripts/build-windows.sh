@@ -3,25 +3,19 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-[[ "${MSYSTEM:-}" == UCRT64 ]] || { echo 'Run this script in an MSYS2 UCRT64 shell on Windows.' >&2; exit 1; }
-for dependency in python gcc meson ninja pkg-config patch objdump rsvg-convert; do
-  command -v "$dependency" >/dev/null || { printf 'Missing build prerequisite: %s\n' "$dependency" >&2;exit 1; }
-done
-APP_VERSION="$(tr -d '\r\n' < VERSION)"
-[[ "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid VERSION.' >&2;exit 1; }
+source scripts/lib.sh
+[[ "${MSYSTEM:-}" == UCRT64 ]] || die 'Run this script in an MSYS2 UCRT64 shell on Windows.'
+require_commands '' python gcc meson ninja pkg-config patch objdump rsvg-convert
+read_app_version
 python tools/fetch-dependencies.py --target windows "$@"
 python tools/build-app-icons.py
-if [[ " ${*:-} " != *" --offline "* ]]; then
+if ! is_offline "$@"; then
   # Serial downloads: MSYS2 meson aborts parallel fetches with EDEADLK (msvcrt lock timeout).
-  meson subprojects download --num-processes 1 --sourcedir vendor/lite-xl
+  download_meson_subprojects --num-processes 1
 fi
 python tools/prepare-windows-source.py
-setup_args=(dist/windows-build dist/windows-source --buildtype=release --wrap-mode=nodownload -Dportable=true -Duse_system_lua=false)
-if [[ -f dist/windows-build/meson-private/coredata.dat ]]; then
-  meson setup --reconfigure "${setup_args[@]}"
-else
-  meson setup "${setup_args[@]}"
-fi
+meson_setup dist/windows-build dist/windows-source --buildtype=release --wrap-mode=nodownload \
+  -Dportable=true -Duse_system_lua=false
 meson compile -C dist/windows-build
 OUT="dist/JottaText-$APP_VERSION-windows-x64-portable"
 rm -rf "$OUT"
