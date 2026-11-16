@@ -27,10 +27,12 @@ files=sorted(path.relative_to(out) for path in out.rglob('*')
              if path.is_file() and path.relative_to(out).parts[0] not in PORTABLE_ONLY)
 if not files:raise SystemExit(f'No files to install in {out}')
 
-# File names become NSIS strings, where a literal $ is written $$.
-def windows(relative):return '\\'.join(PurePosixPath(relative).parts).replace('$','$$')
+def windows(relative):return '\\'.join(PurePosixPath(relative).parts)
 def quote(text):return f'"{text}"'
-def target(directory):return '$INSTDIR'+(('\\'+windows(directory)) if directory.parts else '')
+# Install-time paths are NSIS strings, where a literal $ is written $$. File's
+# source path is read from disk at compile time and must stay literal: a few
+# language-server files are named like protocol.$.d.ts.
+def target(directory):return '$INSTDIR'+(('\\'+windows(directory).replace('$','$$')) if directory.parts else '')
 
 # Paths relative to the staging folder: makensis runs there, and the same
 # script then works under Windows and under Wine.
