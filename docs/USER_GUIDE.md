@@ -214,9 +214,9 @@ preferences. The Shortcuts section is searchable.
 Font and theme samples preview pending choices. Theme Editor opens the custom
 color picker and stores overrides separately for each theme. **Reset section**
 restores that section's defaults in the draft. **Apply** saves the changes and
-updates the editor, and the window stays open so you can keep adjusting;
-**Cancel**, Escape and the close button close it, discarding any changes not yet
-applied. Preferences persist across restarts without editing open documents.
+updates the editor, and the window stays open so you can keep adjusting.
+**Apply** is dimmed until there is something to apply. **Cancel**, Escape and
+the close button close the window, discarding any changes not yet applied. Preferences persist across restarts without editing open documents.
 The existing font and color selectors remain available from their menus.
 
 ## Inline color picker

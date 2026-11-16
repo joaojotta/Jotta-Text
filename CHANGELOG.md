@@ -5,6 +5,9 @@
 - Settings: **Apply** saves and applies your changes but keeps the window open,
   so you can keep adjusting; close it with **Cancel**, × or Escape. The status
   bar confirms "Settings applied."
+- Settings: **Apply** is dimmed and does nothing until you change something,
+  and dims again once the changes are applied or undone. Choosing an indentation
+  again still enables it, so you can re-apply indentation to open files.
 - Settings: the check mark beside the selected option in drop-down lists (for
   example the font lists) showed as a box, because the interface font has no ✓
   character. It is now drawn from the app's icon font.

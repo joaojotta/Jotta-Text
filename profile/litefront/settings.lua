@@ -13,21 +13,43 @@ M.tabs={{'editor','Editor'},{'themes','Themes'},{'theme-editor','Theme Editor'},
 if JOTTA_WEB then table.remove(M.tabs,5) end
 local numbers={ui_size={8,32,1},code_size={8,72,1},indent_size={1,8,1},line_height={1.1,2.2,.05},line_limit={40,240,1},explorer_width={140,600,10},completion_chars={1,8,1}}
 function M.close() M.active=nil;core.redraw=true end
+-- Draft values equal to the saved ones? Internal flags (keys starting with '_')
+-- are ignored, and nil, false and empty tables count as the same unset value.
+local function same(a,b)
+  local function empty(v) return v==nil or v==false or (type(v)=='table' and next(v)==nil) end
+  if empty(a) and empty(b) then return true end
+  if type(a)~='table' or type(b)~='table' then return a==b end
+  for _,pair in ipairs({{a,b},{b,a}}) do
+    for key,value in pairs(pair[1]) do
+      if not (type(key)=='string' and key:sub(1,1)=='_') and not same(value,pair[2][key]) then return false end
+    end
+  end
+  return true
+end
+-- Apply is available only while the draft differs from what was last saved, or
+-- when indentation was chosen again: applying that re-indents open files even
+-- if the value itself is unchanged.
+function M.changed()
+  local s=M.active
+  return s~=nil and not s.invalid and (s.draft._indent_changed==true or not same(s.draft,s.saved))
+end
 function M.open()
   if M.active then return end
   if require('litefront.color_picker').active or require('litefront.dialogs').active then return end
   command.perform('litefront-menu:close');command.perform('litefront:close-editor-actions')
   local menu=package.loaded['plugins.contextmenu'];if menu then menu:hide() end
-  M.active={draft=prefs.snapshot(),tab=M.last_tab,scroll=0,focus='tab-'..M.last_tab,search='',mouse_x=core.root_view.mouse.x,mouse_y=core.root_view.mouse.y}
+  local draft=prefs.snapshot()
+  M.active={draft=draft,saved=prefs.copy(draft),tab=M.last_tab,scroll=0,focus='tab-'..M.last_tab,search='',mouse_x=core.root_view.mouse.x,mouse_y=core.root_view.mouse.y}
   core.redraw=true
 end
 function M.apply()
-  local state=M.active;if not state or state.invalid then return end
+  local state=M.active;if not M.changed() then return end
   local ok,err=prefs.save(state.draft)
   if not ok then core.error('Could not save preferences: %s',err);return end
   -- Stay open: only Cancel, × or Escape close the window. Continue from what
   -- was saved, keeping the current tab and scroll position.
-  state.draft=prefs.snapshot();state.dropdown=nil;state.edit=nil;state.toggle_animations=nil
+  state.draft=prefs.snapshot();state.saved=prefs.copy(state.draft)
+  state.dropdown=nil;state.edit=nil;state.toggle_animations=nil
   core.log('Settings applied.')
   core.redraw=true
 end
@@ -444,7 +466,7 @@ function M.key(key)
   end
   if key=='tab' then
     local list={}
-    for _,c in ipairs(M.layout().controls) do if ({tab=true,select=true,toggle=true,number=true,text=true,color=true,button=true,close=true})[c.kind] then list[#list+1]=c end end
+    for _,c in ipairs(M.layout().controls) do if ({tab=true,select=true,toggle=true,number=true,text=true,color=true,button=true,close=true})[c.kind] and (c.id~='apply' or M.changed()) then list[#list+1]=c end end
     local idx=0;for i,c in ipairs(list) do if c.id==s.focus then idx=i end end
     if idx==0 and mods.shift then idx=1 end
     local c=list[(idx+(mods.shift and -2 or 0))%#list+1];s.edit=nil;s.invalid=nil;s.focus=c.id
@@ -526,10 +548,12 @@ function M.draw()
     elseif c.kind=='close' then visual.icon('close',c.x+5*SCALE,c.y+6*SCALE,16*SCALE,style.dim)
     elseif c.kind=='track' or c.kind=='thumb' then visual.rounded(c.x,c.y,c.w,c.h,3*SCALE,c.kind=='thumb' and style.dim or style.background3)
     else
-      local selected=c.kind=='tab' and c.value==s.tab or c.id=='apply'
-      if s.focus==c.id and not selected then visual.rounded(c.x-1,c.y-1,c.w+2,c.h+2,7*SCALE,style.accent) end
+      -- Apply is highlighted while there are changes to apply, and dimmed otherwise.
+      local disabled=c.id=='apply' and not M.changed()
+      local selected=c.kind=='tab' and c.value==s.tab or (c.id=='apply' and not disabled)
+      if s.focus==c.id and not selected and not disabled then visual.rounded(c.x-1,c.y-1,c.w+2,c.h+2,7*SCALE,style.accent) end
       visual.rounded(c.x,c.y,c.w,c.h,6*SCALE,selected and not s.invalid and style.accent or style.hover_background)
-      visual.text(style.font,c.label,c.x+6*SCALE,c.y,c.w-12*SCALE,c.h,selected and not s.invalid and style.accent_text or style.text,'center')
+      visual.text(style.font,c.label,c.x+6*SCALE,c.y,c.w-12*SCALE,c.h,disabled and style.dim or selected and not s.invalid and style.accent_text or style.text,'center')
     end
   end
   core.push_clip_rect(s.body.x,s.body.y,s.body.w,s.body.h)

@@ -56,14 +56,17 @@ assert(#settings.tabs==7,'settings sections missing')
 local real_time=system.get_time;local now=10
 system.get_time=function() return now end
 local initial=settings.active.draft.word_wrap
+assert(not settings.changed(),'Apply was enabled before any change')
 local start=initial and 1 or 0;local target=1-start
 settings.activate(find('word_wrap'))
+assert(settings.changed(),'a change did not enable Apply')
 assert(settings.active.draft.word_wrap~=initial and settings.toggle_position('word_wrap')==start,'toggle did not stage immediately from its initial position')
 now=10.05;local middle=settings.toggle_position('word_wrap')
 assert(math.abs(middle-.5)<.00001,'toggle did not reach midpoint at 50ms')
 core.redraw=false;settings.update();assert(core.redraw,'transition did not request another frame')
 settings.activate(find('word_wrap'))
 assert(math.abs(settings.toggle_position('word_wrap')-middle)<.00001,'rapid reversal jumped')
+assert(not settings.changed(),'undoing a change left Apply enabled')
 now=10.151;settings.update()
 assert(settings.toggle_position('word_wrap')==start,'toggle did not finish after 100ms')
 now=11;settings.activate(find('word_wrap'));now=11.101;settings.update()
@@ -128,8 +131,10 @@ local found=false;for _,c in ipairs(settings.layout().controls) do if c.label=='
 assert(found,'shortcut filtering did not find the settings shortcut')
 settings.select('general');click('restore_folders')
 assert(table.concat(doc.lines)==source and doc:get_change_id()==revision and not doc:is_dirty(),'preferences modified an open document')
+assert(settings.changed(),'staged changes did not enable Apply')
 click('apply')
 assert(settings.active and settings.active.tab=='general','Apply closed the settings window or changed its tab')
+assert(not settings.changed(),'Apply stayed enabled after applying')
 assert(settings.active.draft.ui_size==18 and settings.active.draft.explorer_width==310,'the open window did not keep the applied values')
 click('cancel')
 assert(not settings.active,'Cancel did not close the settings window after Apply')
