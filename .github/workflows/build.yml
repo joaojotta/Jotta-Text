@@ -194,11 +194,12 @@ jobs:
             mingw-w64-ucrt-x86_64-librsvg
             mingw-w64-ucrt-x86_64-libwebp
             mingw-w64-ucrt-x86_64-libtiff
+            mingw-w64-ucrt-x86_64-nsis
       - name: Check Node and npm build tools
         run: python tests/test-build-tools.py
-      - name: Build portable Windows ZIP
+      - name: Build portable Windows ZIP and installer
         run: bash scripts/build-windows.sh
-      - name: Test portable ZIP with MSYS2 removed from runtime PATH
+      - name: Test portable ZIP and installer with MSYS2 removed from runtime PATH
         run: |
           python tests/test-engine-patch.py
           python tests/test-windows.py
@@ -208,6 +209,13 @@ jobs:
           path: |
             dist/JottaText-*-windows-x64-portable.zip
             dist/JottaText-*-windows-x64-portable.zip.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: JottaText-${{ needs.version.outputs.version }}-Windows-x64-setup
+          path: |
+            dist/JottaText-*-windows-x64-setup.exe
+            dist/JottaText-*-windows-x64-setup.exe.sha256
           if-no-files-found: error
 
   web:
@@ -302,7 +310,7 @@ jobs:
         working-directory: dist/release
         run: |
           ls -l
-          [[ "$(ls *.sha256 | wc -l)" -eq 4 ]] || { echo '::error::Expected four packages with checksums'; exit 1; }
+          [[ "$(ls *.sha256 | wc -l)" -eq 5 ]] || { echo '::error::Expected five packages with checksums'; exit 1; }
           sha256sum --check --strict *.sha256
       - name: Extract release notes from CHANGELOG.md
         if: steps.decide.outputs.publish == 'true'

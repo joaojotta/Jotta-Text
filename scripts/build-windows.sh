@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run in an MSYS2 UCRT64 shell on Windows; produces an installer-free ZIP.
+# Run in an MSYS2 UCRT64 shell on Windows; produces a portable ZIP and a per-user installer.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 source scripts/lib.sh
 [[ "${MSYSTEM:-}" == UCRT64 ]] || die 'Run this script in an MSYS2 UCRT64 shell on Windows.'
-require_commands '' python gcc meson ninja pkg-config patch objdump rsvg-convert
+require_commands '' python gcc meson ninja pkg-config patch objdump rsvg-convert makensis
 read_app_version
 python tools/fetch-dependencies.py --target windows "$@"
 python tools/build-app-icons.py
@@ -24,4 +24,6 @@ cp dist/windows-build/src/lite-xl.exe "$OUT/JottaText.exe"
 gcc -O2 -Wall -Wextra -municode -o "$OUT/litefront-file-dialog.exe" tools/native/file-dialog-windows.c -lole32 -lshell32 -luuid
 python tools/prepare-bundle.py "$OUT/data" --target windows
 python tools/package-windows.py "$OUT" "$MINGW_PREFIX"
+python tools/package-windows-installer.py "$OUT"
 printf '\nPortable Windows build: %s.zip\nExtract the whole ZIP and run JottaText.exe.\n' "$OUT"
+printf 'Windows installer: dist/JottaText-%s-windows-x64-setup.exe\n' "$APP_VERSION"

@@ -1,5 +1,19 @@
 # Changelog
 
+## Jotta Text v0.7.0 — 2026-11-16
+
+- Windows installer: `JottaText-<version>-windows-x64-setup.exe` installs Jotta
+  Text for the current user without administrator access, adds a Start menu
+  shortcut (optionally a desktop shortcut) and an uninstall entry in Windows
+  Settings, in English or Portuguese. The installed copy keeps settings and
+  unsaved recovery in `%APPDATA%\JottaText`. A newer installer replaces the
+  previous version and keeps settings; the uninstaller removes only the files it
+  installed and keeps settings unless you choose to remove them.
+- The portable ZIP is unchanged and still keeps settings in `user/` beside
+  `JottaText.exe`.
+- CI builds the installer with NSIS and tests install, upgrade and uninstall on
+  Windows. Releases now publish five packages.
+
 ## Jotta Text v0.6.2 — 2026-11-15
 
 - Publish a GitHub Release automatically when a push to `main` passes every

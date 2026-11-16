@@ -314,11 +314,14 @@ See [GITHUB_TRIAL.md](../GITHUB_TRIAL.md) for setup, limits, tests and removal.
 | ----------------------- | ----------------------------------------------------------- |
 | Native Linux / AppImage | `~/.config/litefront` (respects `XDG_CONFIG_HOME`)          |
 | Flatpak                 | `~/.var/app/io.github.joaojotta.JottaText/config/litefront` |
+| Windows installer       | `%APPDATA%\JottaText`                                       |
 | Windows portable        | `user/` beside `JottaText.exe`                              |
 | Web                     | IndexedDB for the site's origin                             |
 
 Jotta Text continues JottaXL and LiteFront. Native builds retain the existing
 settings directory. On its first launch, the Jotta Text Flatpak copies previous
 JottaXL settings and document recovery if the new settings directory is absent.
-The earlier data is retained. Preserve the portable `user/` folder when upgrading;
+The earlier data is retained. The Windows installer keeps settings when upgrading
+or uninstalling, unless you select their removal in the uninstaller. Preserve the
+portable `user/` folder when upgrading;
 browser recovery stays with the same site origin.

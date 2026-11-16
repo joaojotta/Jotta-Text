@@ -1,6 +1,6 @@
 # Publish Jotta Text on GitHub
 
-The current release is **0.6.2**. Suggested repository name: **jotta-text**.
+The current release is **0.7.0**. Suggested repository name: **jotta-text**.
 
 ## Prepare the source
 
@@ -10,7 +10,7 @@ From this project directory:
 python3 tools/package-source.py
 ```
 
-This creates `dist/JottaText-0.6.2-source.zip` and its SHA-256 checksum. Extract
+This creates `dist/JottaText-0.7.0-source.zip` and its SHA-256 checksum. Extract
 it to a new directory and open a terminal in the extracted folder. The archive
 includes the application source, engine patch, dependency locks, fonts, icons,
 attribution, tests and GitHub Actions workflow. Downloaded dependencies, build
@@ -29,7 +29,7 @@ adding a README or other initial files. In the extracted source directory, run:
 ```bash
 git init -b main
 git add .
-git commit -m "Initial Jotta Text 0.6.2 source"
+git commit -m "Initial Jotta Text 0.7.0 source"
 git remote add origin https://github.com/joaojotta/jotta-text.git
 git push -u origin main
 ```
@@ -46,7 +46,7 @@ redistributable packages; see [Credits and licenses](README.md#credits-and-licen
 ## Build the downloadable packages
 
 After the push, **Actions → Build Jotta Text** builds and tests the Flatpak,
-AppImage, Windows portable ZIP and browser ZIP. Every run keeps them in its
+AppImage, Windows installer, Windows portable ZIP and browser ZIP. Every run keeps them in its
 **Artifacts** section.
 
 ## Publish a release
@@ -54,7 +54,7 @@ AppImage, Windows portable ZIP and browser ZIP. Every run keeps them in its
 Update `VERSION` and add a matching `## Jotta Text v<version> — <date>` entry to
 `CHANGELOG.md`, then push to `main`. When every job passes, the **release** job
 creates the `v<version>` tag on that commit and publishes a GitHub Release with
-all four packages, their checksums and that changelog entry as release notes.
+all five packages, their checksums and that changelog entry as release notes.
 You do not need to create the tag yourself.
 
 A push that keeps an already released `VERSION` is built and tested but not

@@ -10,15 +10,16 @@ See [Linux prerequisites](../BUILD_UBUNTU.md),
 ## Automated builds
 
 [.github/workflows/build.yml](../.github/workflows/build.yml) builds **Flatpak,
-AppImage, Windows portable and Web** on pushes, pull requests and manual runs.
-In GitHub, choose **Actions → Build Jotta Text → Run workflow**. Download the four
+AppImage, Windows installer, Windows portable and Web** on pushes, pull requests
+and manual runs. In GitHub, choose **Actions → Build Jotta Text → Run workflow**.
+Download the five
 packages and their checksums from the completed run's **Artifacts** section.
 Tags beginning with `v` must match `VERSION`; CI does not create releases or
 publish a website. The Linux/Windows jobs currently build x86_64 only.
 
 The browser job compiles the actual Lite XL engine with Emscripten and tests it
 in Chromium. Windows builds on a Windows runner and tests the extracted ZIP
-without MSYS2 on its runtime PATH. AppImage builds on Ubuntu 22.04 to keep an
+and the installer (install, upgrade, uninstall) without MSYS2 on the runtime PATH. AppImage builds on Ubuntu 22.04 to keep an
 older glibc baseline; Flatpak uses Freedesktop 25.08. Uploads require successful
 builds and checks, and the workflow needs no custom secrets.
 
@@ -40,7 +41,7 @@ The old `jottaxl` and `litefront` launchers remain aliases. Existing settings ar
 It installs separately from the earlier Flatpaks. On first launch, it copies the
 previous JottaXL sandbox's settings, open folders and document recovery into its
 own settings directory, if that directory does not yet exist. The original data
-is retained. Portable Windows keeps `user/`; browser storage keeps the same
+is retained. Installed Windows keeps `%APPDATA%\JottaText`, portable Windows keeps `user/`; browser storage keeps the same
 workspace when served from the same origin. It uses its own bundled
 features; it does not depend on another installed Lite XL profile. With all
 sources cached, `bash scripts/build-native.sh --offline` avoids dependency downloads.
@@ -115,12 +116,15 @@ The build fetches pinned feature sources and Node packages on the host, stages
 all application data, then compiles offline inside the SDK. All editor features
 are included in the resulting bundle.
 
-## Windows portable
+## Windows
 
-Extract `JottaText-VERSION-windows-x64-portable.zip` and run **JottaText.exe**.
-Keep its DLLs and `data/` directory together. The `user/` directory beside the
-executable holds settings and session recovery; preserve it when upgrading.
-No installer or separately installed Node is needed. To build it yourself, use
+Run `JottaText-VERSION-windows-x64-setup.exe` to install for the current user
+(no administrator access), or extract `JottaText-VERSION-windows-x64-portable.zip`
+and run **JottaText.exe**. Both contain the same program files. The installed
+copy keeps settings and session recovery in `%APPDATA%\JottaText`; the portable
+copy keeps them in the `user/` directory beside the executable, which wins
+whenever it exists. Preserve `user/` when upgrading the portable copy. No
+separately installed Node is needed. To build both yourself, use
 `bash scripts/build-windows.sh` from an MSYS2 UCRT64 shell as described in
 [BUILD_WINDOWS.md](../BUILD_WINDOWS.md).
 

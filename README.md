@@ -54,12 +54,13 @@ under **Artifacts**. Extract the downloaded artifact ZIP to find the package.
 See [VERSION](VERSION) for the current version and [CHANGELOG.md](CHANGELOG.md)
 for release notes.
 
-| Edition                | Package                                        | How to open it                                                  |
-| ---------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
-| **Linux · Flatpak**    | `JottaText-<version>-x86_64.flatpak`           | Install or update with the command below.                       |
-| **Linux · AppImage**   | `JottaText-<version>-x86_64.AppImage`          | Mark the file executable, then open it.                         |
-| **Windows · Portable** | `JottaText-<version>-windows-x64-portable.zip` | Extract the whole ZIP and run `JottaText.exe`.                  |
-| **Web**                | `JottaText-<version>-web.zip`                  | Extract and serve over HTTP/HTTPS. [Web guide →](web/README.md) |
+| Edition                 | Package                                        | How to open it                                                  |
+| ----------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
+| **Linux · Flatpak**     | `JottaText-<version>-x86_64.flatpak`           | Install or update with the command below.                       |
+| **Linux · AppImage**    | `JottaText-<version>-x86_64.AppImage`          | Mark the file executable, then open it.                         |
+| **Windows · Installer** | `JottaText-<version>-windows-x64-setup.exe`    | Run it; no administrator access is needed.                      |
+| **Windows · Portable**  | `JottaText-<version>-windows-x64-portable.zip` | Extract the whole ZIP and run `JottaText.exe`.                  |
+| **Web**                 | `JottaText-<version>-web.zip`                  | Extract and serve over HTTP/HTTPS. [Web guide →](web/README.md) |
 
 From the folder containing the downloaded Flatpak bundle:
 
@@ -68,7 +69,8 @@ flatpak install --user --or-update ./JottaText-*-x86_64.flatpak
 ```
 
 For a local build, the bundle is in `dist/`. Close and reopen the app after
-updating. On Windows, preserve the `user/` folder during upgrades.
+updating. To upgrade the Windows installer, run the newer installer; it keeps
+your settings. For the portable ZIP, preserve the `user/` folder.
 [Settings and recovery locations →](docs/USER_GUIDE.md#settings-and-recovery-storage)
 
 Automated desktop builds target x86_64. Local Linux builds also support aarch64.
@@ -130,7 +132,7 @@ project directory. The first build downloads pinned dependencies; use
 | Native Linux     | `bash scripts/build-native.sh`   | [Linux](BUILD_UBUNTU.md#native-application) |
 | AppImage         | `bash scripts/build-appimage.sh` | [AppImage](BUILD_UBUNTU.md#appimage)        |
 | Flatpak          | `bash scripts/build-flatpak.sh`  | [Flatpak](BUILD_UBUNTU.md#flatpak)          |
-| Windows portable | `bash scripts/build-windows.sh`  | [MSYS2 UCRT64](BUILD_WINDOWS.md)            |
+| Windows          | `bash scripts/build-windows.sh`  | [MSYS2 UCRT64](BUILD_WINDOWS.md)            |
 | Web              | `bash scripts/build-web.sh`      | [Emscripten](web/README.md#build-and-run)   |
 
 Run a native build with `bash scripts/run-native.sh`. Build outputs and checksums
@@ -150,7 +152,8 @@ python3 tests/run-smoke.py
 
 The [development guide](docs/DEVELOPMENT.md#development-checks) covers the full
 check suite, offline builds, engine patches and packaging. GitHub Actions builds
-and tests Flatpak, AppImage, Windows portable and Web on pushes and pull requests.
+and tests Flatpak, AppImage, the Windows installer and portable ZIP, and Web on
+pushes and pull requests.
 
 For bug reports, use [Issues](https://github.com/joaojotta/Jotta-Text/issues) and
 include your app version, operating system and steps to reproduce the problem.
