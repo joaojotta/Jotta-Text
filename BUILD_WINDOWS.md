@@ -33,6 +33,33 @@ build uses the installed UCRT64 library versions and collects their imported
 DLLs and notices. Later builds can use `--offline` after all source, Meson and
 Node caches are present.
 
+## Build on Linux
+
+The same packages can be cross-built on Linux x86_64 without Windows:
+
+```bash
+bash scripts/build-windows-cross.sh
+```
+
+Prerequisites: Python 3, Git, npm, Meson, Ninja, pkg-config, `patch`, binutils
+(`objdump`), `rsvg-convert`, Pillow and Wine (`zstd` too if Python is older than
+3.14). On Arch Linux:
+
+```bash
+sudo pacman -S --needed python python-pillow git npm meson ninja pkgconf patch binutils librsvg wine
+```
+
+The first run downloads and verifies the pinned cross toolchain listed in
+`tools/windows-cross.lock.json` into `vendor/windows/`: llvm-mingw, the MSYS2
+UCRT64 libraries that Jotta Text links and bundles, and NSIS. NSIS runs under
+Wine in a private prefix (`dist/wine-nsis`), unless `makensis` is installed or
+`MAKENSIS` names another command. Later builds can pass `--offline`. Output is the
+same as above. To test it under Wine (this needs a desktop session):
+
+```bash
+python3 tests/test-windows.py --wine
+```
+
 ## Installer
 
 The installer is per-user and needs no administrator access. It installs to

@@ -128,13 +128,14 @@ Install the platform prerequisites, then run the appropriate command from the
 project directory. The first build downloads pinned dependencies; use
 `--offline` on later builds once the caches are populated.
 
-| Target           | Command                          | Setup guide                                 |
-| ---------------- | -------------------------------- | ------------------------------------------- |
-| Native Linux     | `bash scripts/build-native.sh`   | [Linux](BUILD_UBUNTU.md#native-application) |
-| AppImage         | `bash scripts/build-appimage.sh` | [AppImage](BUILD_UBUNTU.md#appimage)        |
-| Flatpak          | `bash scripts/build-flatpak.sh`  | [Flatpak](BUILD_UBUNTU.md#flatpak)          |
-| Windows          | `bash scripts/build-windows.sh`  | [MSYS2 UCRT64](BUILD_WINDOWS.md)            |
-| Web              | `bash scripts/build-web.sh`      | [Emscripten](web/README.md#build-and-run)   |
+| Target           | Command                               | Setup guide                                    |
+| ---------------- | ------------------------------------- | ---------------------------------------------- |
+| Native Linux     | `bash scripts/build-native.sh`        | [Linux](BUILD_UBUNTU.md#native-application)    |
+| AppImage         | `bash scripts/build-appimage.sh`      | [AppImage](BUILD_UBUNTU.md#appimage)           |
+| Flatpak          | `bash scripts/build-flatpak.sh`       | [Flatpak](BUILD_UBUNTU.md#flatpak)             |
+| Windows          | `bash scripts/build-windows.sh`       | [MSYS2 UCRT64](BUILD_WINDOWS.md)               |
+| Windows on Linux | `bash scripts/build-windows-cross.sh` | [Cross-build](BUILD_WINDOWS.md#build-on-linux) |
+| Web              | `bash scripts/build-web.sh`           | [Emscripten](web/README.md#build-and-run)      |
 
 Run a native build with `bash scripts/run-native.sh`. Build outputs and checksums
 are written to `dist/`.

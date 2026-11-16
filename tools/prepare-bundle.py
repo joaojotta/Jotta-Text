@@ -100,9 +100,16 @@ def engine_version():
     return match.group(1)
 
 
-def patch_start(data):
+def patch_start(data, target):
     """Set identity and stop the engine searching user directories for Lua or native modules."""
     with Source(data / 'core/start.lua') as start:
+        if target == 'windows':
+            # A user/ folder beside JottaText.exe keeps the portable ZIP
+            # self-contained. The installed copy has none, so it keeps settings
+            # in %APPDATA%\JottaText rather than Lite XL's %USERPROFILE%\.config\lite-xl.
+            fallback = '       or os.getenv("LITE_USERDIR")\n'
+            start.replace(fallback, fallback +
+                          '       or (os.getenv("APPDATA") and (os.getenv("APPDATA") .. PATHSEP .. "JottaText"))\n')
         start.replace('@PROJECT_VERSION@', engine_version())
         start.append(f'\nAPP_NAME = "Jotta Text"\nAPP_VERSION = "{application_version()}"\n')
         start.replace("package.path = USERDIR .. '/?.lua;' .. package.path", '')
@@ -385,7 +392,7 @@ def main():
     if data.exists():
         shutil.rmtree(data)
     copy(UPSTREAM / 'data', data)
-    patch_start(data)
+    patch_start(data, args.target)
     patch_core(data)
     copy_application(data)
     patch_builtin_plugins(data)

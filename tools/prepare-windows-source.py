@@ -26,16 +26,6 @@ text=text.replace('return _wrename(oldpath_w, newpath_w);', '''if (MoveFileExW(o
       failure==ERROR_ALREADY_EXISTS?EEXIST:failure==ERROR_DISK_FULL?ENOSPC:EACCES;
     return -1;''')
 wrapper.write_text(text)
-# A `user/` folder beside JottaText.exe keeps the portable ZIP self-contained.
-# The installed copy has none, so it keeps settings in %APPDATA%\JottaText
-# instead of falling back to Lite XL's %USERPROFILE%\.config\lite-xl.
-start=source/'data/core/start.lua'
-text=start.read_text()
-fallback='''       or os.getenv("LITE_USERDIR")
-'''
-if fallback not in text:raise SystemExit('start.lua no longer has the expected USERDIR fallback')
-start.write_text(text.replace(fallback,fallback+'''       or (os.getenv("APPDATA") and (os.getenv("APPDATA") .. PATHSEP .. "JottaText"))
-''',1))
 manifest=source/'resources/windows/lite-xl.exe.manifest.in'
 text=manifest.read_text().replace('LiteXL.LiteXL.LiteXL','JottaText.JottaText')
 text=text.replace('@PROJECT_ASSEMBLY_VERSION@',(ROOT/'VERSION').read_text().strip()+'.0')

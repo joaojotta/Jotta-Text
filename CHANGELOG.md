@@ -11,6 +11,8 @@
   installed and keeps settings unless you choose to remove them.
 - The portable ZIP is unchanged and still keeps settings in `user/` beside
   `JottaText.exe`.
+- Build both Windows packages on Linux with `scripts/build-windows-cross.sh`,
+  using a pinned llvm-mingw toolchain, MSYS2 libraries and NSIS under Wine.
 - CI builds the installer with NSIS and tests install, upgrade and uninstall on
   Windows. Releases now publish five packages.
 - Web: remove the toolbar above the editor. Its Open file, Import folder,

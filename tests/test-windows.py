@@ -68,7 +68,12 @@ def check_checksum(package):
     checksum=Path(str(package)+'.sha256').read_bytes()
     assert checksum==f'{digest}  {package.name}\n'.encode(),('checksum file must be one LF-terminated line',checksum)
 
-def windows_path(path):return 'Z:'+str(path).replace('/','\\') if wine else str(path)
+# MSYS2's Python writes Windows paths with forward slashes (C:/Users/...). NSIS
+# rejects those as an install folder and falls back to its default, so always
+# hand Windows programs backslashes.
+def windows_path(path):
+    text=str(path).replace('/','\\')
+    return 'Z:'+text if wine else text
 
 def run(command,timeout,**changes):
     # errors='replace': console tools print in the OEM code page, not UTF-8.
