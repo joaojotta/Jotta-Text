@@ -27,7 +27,13 @@ try{
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'||message.text().startsWith('Error:'))console.error('Browser:',message.text());});
   const url=`http://127.0.0.1:${server.address().port}/`;
-  async function ready(){await page.waitForSelector('#open-file:not([disabled])',{timeout:60000});}
+  async function ready(){
+    await page.waitForFunction(()=>globalThis.JottaBrowserReady===true,null,{timeout:60000});
+    assert(await page.locator('#status').isHidden(),'the startup notice stayed over the editor');
+  }
+  // The editor's own shortcuts replace the old toolbar; the key press is also
+  // the user activation browsers require before opening a file picker.
+  async function shortcut(keys){await page.focus('#canvas');await page.keyboard.press(keys);}
   async function snapshotContains(text){
     try{await page.waitForFunction(text=>{
       try{return Module.FS.readFile('/persist/user/documents.lua',{encoding:'utf8'}).includes(text);}catch{return false;}
@@ -39,27 +45,28 @@ try{
     }
   }
   async function importFile(name,source){
-    const chooser=page.waitForEvent('filechooser');await page.click('#open-file');
+    const chooser=page.waitForEvent('filechooser');await shortcut('Control+o');
     await (await chooser).setFiles({name,mimeType:'text/plain',buffer:Buffer.from(source)});
     await snapshotContains(name);
   }
   await page.goto(url);await ready();
+  assert.equal(await page.locator('header').count(),0,'the browser toolbar returned');
   await fs.mkdir(path.join(fixture,'site'));
   await fs.writeFile(path.join(fixture,'site/index.html'),'<h1>Folder project</h1>');
-  const folderChooser=page.waitForEvent('filechooser');await page.click('#open-folder');
+  const folderChooser=page.waitForEvent('filechooser');await shortcut('Control+Shift+o');
   await (await folderChooser).setFiles(path.join(fixture,'site'));
   await snapshotContains('/persist/workspace/site');
   await importFile('portable.js','const answer=42');
   await page.click('#canvas');await page.keyboard.press('Control+Alt+Shift+f');
   await snapshotContains('const answer = 42;');
   assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/workspace/portable.js',{encoding:'utf8'})),'const answer=42');
-  await page.waitForFunction(()=>document.getElementById('status').textContent.includes('saved'));
+  await page.waitForFunction(()=>document.body.dataset.storage==='saved');
   await page.reload();await ready();
   await snapshotContains('/persist/workspace/site');
   await page.click('#canvas');await page.keyboard.press('Control+End');await page.keyboard.type('// reopened');
   await snapshotContains('// reopened');await snapshotContains('const answer = 42;');
   await importFile('preview.html','<!doctype html><html><body><h1>Initial</h1></body></html>');
-  await page.click('#preview');await page.frameLocator('#preview-frame').getByText('Initial',{exact:true}).waitFor();
+  await shortcut('Control+Alt+p');await page.frameLocator('#preview-frame').getByText('Initial',{exact:true}).waitFor();
   await page.click('#canvas');await page.keyboard.press('Control+a');
   await page.keyboard.type('<!doctype html><html><body><h1>Changed live</h1></body></html>');
   await page.frameLocator('#preview-frame').getByText('Changed live',{exact:true}).waitFor();
@@ -73,7 +80,7 @@ try{
   assert.equal((await downloaded).suggestedFilename(),'preview-copy.html');
   assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/workspace/preview-copy.html',{encoding:'utf8'})),
     '<!doctype html><html><body><h1>Changed live</h1></body></html>\n','save dialog typing changed the editor buffer');
-  await page.click('#settings');
+  await shortcut('Control+Comma');
   assert.deepEqual(errors,[]);
   const errorLog=await page.evaluate(()=>Module.FS.analyzePath('/persist/user/error.txt').exists);
   assert.equal(errorLog,false,'The WASM engine wrote an error log');

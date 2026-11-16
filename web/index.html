@@ -8,16 +8,10 @@
   <link rel="stylesheet" href="shell.css">
 </head>
 <body>
-  <header>
-    <img src="assets/icon.svg" alt="Jotta Text" width="28" height="28">
-    <button id="open-file" disabled>Open file</button>
-    <button id="open-folder" disabled>Import folder</button>
-    <button id="download" disabled>Download file</button>
-    <button id="preview" disabled>Live preview</button>
-    <button id="settings" disabled>Settings</button>
-    <span id="status" role="status">Loading Jotta Text…</span>
-  </header>
   <main>
+    <!-- Shown while loading, on startup failure and for storage warnings; the
+         editor's own menu bar has every file, preview and settings action. -->
+    <div id="status" role="status">Loading Jotta Text…</div>
     <canvas id="canvas" tabindex="0" aria-label="Jotta Text code editor" oncontextmenu="event.preventDefault()"></canvas>
     <section id="preview-panel" hidden aria-label="Live preview">
       <div><strong>Live preview</strong><button id="close-preview" aria-label="Close preview">×</button></div>
@@ -32,10 +26,12 @@
     <div><button value="cancel" formnovalidate>Cancel</button><button value="save">Download</button></div></form>
   </dialog>
   <script>
-    // Report startup failures instead of leaving the page on "Loading" with disabled buttons.
+    // Report startup failures instead of leaving the page on "Loading".
     function jottaStartupFailed(message) {
       if (globalThis.JottaBrowserReady) return;
-      document.getElementById('status').textContent = message;
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.hidden = false;
     }
     addEventListener('error', event => {
       if (event instanceof ErrorEvent) jottaStartupFailed('Jotta Text could not start: ' + event.message);

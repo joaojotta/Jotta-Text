@@ -85,10 +85,8 @@ function M.install()
       local event=bridge.poll(0)
       if event then
         local item=json.decode(event)
-        if item.kind=='folder' then
-          core.confirm_close_docs(core.docs,function() core.open_folder_project(item.path) end)
-        elseif item.kind=='file' then core.root_view:open_doc(core.open_doc(item.path))
-        elseif item.kind=='command' then require('core.command').perform(item.command) end
+        -- Extra files chosen in one Open File dialog; the first opens directly.
+        if item.kind=='file' then core.root_view:open_doc(core.open_doc(item.path)) end
       end
       if system.get_time()-last_sync>2 then
         require('litefront.session').save()

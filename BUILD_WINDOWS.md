@@ -42,7 +42,8 @@ Settings and unsaved recovery are kept in `%APPDATA%\JottaText`. Running a newer
 installer removes the previous version's files first and keeps settings. The
 uninstaller removes only the files it installed; it deletes settings only when
 you select that option. Silent use: `setup.exe /S`, optionally with
-`/D=C:\path\to\folder` as the last argument; uninstall with `Uninstall.exe /S`.
+`/D=C:\path\to\folder` as the last argument, unquoted even if the path has
+spaces; uninstall with `Uninstall.exe /S`.
 
 The installer is not code-signed, so Windows SmartScreen shows a warning on
 first run (**More info → Run anyway**).

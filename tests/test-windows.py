@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 ROOT=Path(__file__).resolve().parent.parent
 parser=argparse.ArgumentParser(description=__doc__)
@@ -20,6 +21,7 @@ version=(ROOT/'VERSION').read_text().strip()
 archive=args.dist/f'JottaText-{version}-windows-x64-portable.zip'
 setup=args.dist/f'JottaText-{version}-windows-x64-setup.exe'
 UNINSTALL_KEY=r'HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\JottaText'
+SETTINGS_KEY=r'HKCU\Software\JottaText'
 PORTABLE_ONLY={'user','README.txt'}
 
 # Appended to data/litefront/init.lua of a disposable copy. JOTTA_TEST_USERDIR
@@ -69,7 +71,9 @@ def check_checksum(package):
 def windows_path(path):return 'Z:'+str(path).replace('/','\\') if wine else str(path)
 
 def run(command,timeout,**changes):
-    return subprocess.run([*prefix,*map(str,command)],env=dict(env,**changes),capture_output=True,text=True,timeout=timeout)
+    # errors='replace': console tools print in the OEM code page, not UTF-8.
+    return subprocess.run([*prefix,*map(str,command)],env=dict(env,**changes),capture_output=True,text=True,
+                          errors='replace',timeout=timeout)
 
 def inject_harness(app):
     init=app/'data/litefront/init.lua'
@@ -83,10 +87,16 @@ def run_editor(app,userdir,phase,**changes):
     assert result_file.read_text()=='PASS',result_file.read_text()
 
 def registry_value(key,name):
-    result=run(['reg','query',key,'/v',name],30)
-    if result.returncode!=0:return None
-    line=next(line for line in result.stdout.splitlines() if line.strip().startswith(name))
-    return line.split('REG_',1)[1].split(None,1)[1].strip()
+    # reg export writes UTF-16, unlike reg query's code-page console output, so
+    # Unicode install paths survive.
+    exported=temp/'registry.reg'
+    exported.unlink(missing_ok=True)
+    if run(['reg','export',key,windows_path(exported),'/y'],30).returncode!=0:return None
+    prefix_text=f'"{name}"="'
+    for line in exported.read_text(encoding='utf-16').splitlines():
+        if line.startswith(prefix_text) and line.endswith('"'):
+            return line[len(prefix_text):-1].replace('\\"','"').replace('\\\\','\\')
+    return None
 
 def start_menu_shortcut():
     programs=registry_value(r'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders','Programs')
@@ -125,12 +135,20 @@ def test_installer(temp):
     userdir=appdata/'JottaText'
     shortcut=start_menu_shortcut()
 
+    # NSIS reads /D= and _?= raw: they must be unquoted even with spaces, which
+    # subprocess and Wine cannot pass. Pre-set the folder the installer offers
+    # (its InstallDirRegKey) instead, and run the uninstaller as users do.
+    result=run(['reg','add',SETTINGS_KEY,'/v','InstallDir','/t','REG_SZ','/d',windows_path(target),'/f'],30)
+    assert result.returncode==0,(result.stdout,result.stderr)
+
     def install():
-        result=run([setup,'/S',f'/D={windows_path(target)}'],600)
+        result=run([setup,'/S'],600)
         assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
         # Exactly the ZIP's program files: no portable user/ folder, and nothing
         # left behind by the previous version or by running it.
-        assert installed_files(target)==sorted([*shipped,'Uninstall.exe']),'installed files differ from the ZIP'
+        installed,expected=set(installed_files(target)),{*shipped,'Uninstall.exe'}
+        assert installed==expected,('installed files differ from the ZIP',
+            'missing:',sorted(expected-installed)[:20],'unexpected:',sorted(installed-expected)[:20])
         assert registry_value(UNINSTALL_KEY,'DisplayVersion')==version
         assert same_path(registry_value(UNINSTALL_KEY,'InstallLocation'),target)
         assert shortcut.is_file(),f'missing Start menu shortcut {shortcut}'
@@ -142,11 +160,15 @@ def test_installer(temp):
     run_editor(target,userdir,'1',**settings)
     install()  # Upgrade in place: unsaved documents must survive it.
     run_editor(target,userdir,'2',**settings)
-    result=run([target/'Uninstall.exe','/S',f'_?={windows_path(target)}'],300)
+    result=run([target/'Uninstall.exe','/S'],60)
     assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
-    # _?= runs the uninstaller in place, so it cannot delete itself.
-    assert installed_files(target)==['Uninstall.exe'],installed_files(target)
+    # The uninstaller continues from a copy in %TEMP% so it can delete itself.
+    deadline=time.monotonic()+300
+    while (target.exists() or registry_value(UNINSTALL_KEY,'DisplayName') is not None) and time.monotonic()<deadline:
+        time.sleep(1)
+    assert not target.exists(),('uninstall left files behind',installed_files(target)[:20])
     assert registry_value(UNINSTALL_KEY,'DisplayName') is None,'uninstall entry remains'
+    assert registry_value(SETTINGS_KEY,'InstallDir') is None,'install folder setting remains'
     assert not shortcut.exists(),'Start menu shortcut remains'
     assert (userdir/'documents.lua').is_file(),'uninstalling removed settings and recovery by default'
     print('PASS: installer checksum, per-user install to a Unicode/space path, settings in %APPDATA%, upgrade keeps recovery, clean uninstall')

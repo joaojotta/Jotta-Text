@@ -10,14 +10,20 @@ worker.onerror=event=>{
 const finish=(id,result)=>{if(pending.has(id))pending.set(id,{result});};
 const fail=(id,error)=>{if(pending.has(id))pending.set(id,{error:String(error.message||error)});};
 const fs=()=>globalThis.Module.FS;
+// The notice over the editor appears only while loading, on failure, or when
+// browser storage cannot keep the workspace. Clicking a warning dismisses it.
+function notice(text){$('status').textContent=text;$('status').hidden=false;}
+$('status').onclick=()=>{if(ready)$('status').hidden=true;};
+// data-storage on <body> is 'unsaved', 'saving', 'saved' or 'unavailable'.
+const storageState=state=>{document.body.dataset.storage=state;};
 function sync(){
   if(!storageAvailable)return Promise.resolve(false);
   syncing=syncing.catch(()=>{}).then(()=>new Promise((resolve,reject)=>{
     const snapshotGeneration=generation;
-    $('status').textContent='Saving workspace in this browser…';
+    storageState('saving');
     fs().syncfs(false,error=>{
-      if(error){storageAvailable=false;$('status').textContent='Browser storage failed. Download files to keep a copy.';resolve(false);}
-      else{if(snapshotGeneration===generation)$('status').textContent='Workspace saved in this browser';resolve(true);}
+      if(error){storageAvailable=false;storageState('unavailable');notice('Browser storage failed. Download files to keep a copy.');resolve(false);}
+      else{if(snapshotGeneration===generation)storageState('saved');resolve(true);}
     });
   }));
   return syncing;
@@ -63,7 +69,7 @@ function preview(payload,show=true,print=false){
   resize();
 }
 async function handle(kind,payload){
-  if(kind==='dirty'){generation++;$('status').textContent=storageAvailable?'Unsaved browser changes…':'Storage unavailable · download files before closing';return true;}
+  if(kind==='dirty'){generation++;if(storageAvailable)storageState('unsaved');return true;}
   if(kind==='theme'){
     for(const key of ['bg','panel','line','ink','accent'])document.documentElement.style.setProperty('--'+key,payload[key]);
     document.documentElement.style.colorScheme=payload.mode;return true;
@@ -81,8 +87,9 @@ async function handle(kind,payload){
   if(kind==='sync'){await sync();return true;}
   if(kind==='preview'||kind==='preview-update'||kind==='print'){preview(payload,kind!=='preview-update',kind==='print');return true;}
   if(kind==='ready'){
-    ready=true;globalThis.JottaBrowserReady=true;document.querySelectorAll('header button').forEach(button=>button.disabled=false);
-    $('status').textContent=storageAvailable?'Ready · files stay on this device':'Storage unavailable · download files before closing';
+    ready=true;globalThis.JottaBrowserReady=true;document.body.classList.add('ready');
+    if(storageAvailable){storageState('saved');$('status').hidden=true;}
+    else{storageState('unavailable');notice('Browser storage is unavailable. Download files before closing this tab.');}
     requestAnimationFrame(resize);$('canvas').focus();return true;
   }
   throw new Error('Unknown browser request: '+kind);
@@ -109,18 +116,11 @@ function resize(){
   globalThis.Module._jotta_web_resize(width,height);
 }
 new ResizeObserver(resize).observe($('canvas'));
-async function importFromToolbar(folder){
-  try{
-    const result=await pick(folder);
-    if(folder&&result)events.push({kind:'folder',path:result});
-    else for(const path of result||[])events.push({kind:'file',path});
-  }catch(error){$('status').textContent=error.message;}
-}
-$('open-file').onclick=()=>importFromToolbar(false);
-$('open-folder').onclick=()=>importFromToolbar(true);
-$('download').onclick=()=>events.push({kind:'command',command:'doc:save'});
-$('preview').onclick=()=>events.push({kind:'command',command:'litefront:open-web-preview'});
-$('settings').onclick=()=>events.push({kind:'command',command:'litefront:settings'});
+// The editor syncs to IndexedDB every two seconds; without storage nothing
+// survives the tab. Ask before closing while edits are not yet stored.
+addEventListener('beforeunload',event=>{
+  if(ready&&(storageAvailable?document.body.dataset.storage!=='saved':generation>0))event.preventDefault();
+});
 $('close-preview').onclick=()=>{$('preview-panel').hidden=true;resize();};
 document.addEventListener('keydown',event=>{
   if((event.ctrlKey||event.metaKey)&&['s','o','n'].includes(event.key.toLowerCase())&&!$('save-dialog').open)event.preventDefault();
@@ -133,8 +133,8 @@ for(const type of ['keydown','keyup','keypress','input','textInput']){
 globalThis.Module={
   canvas:$('canvas'),thisProgram:'/app/jotta-text',arguments:[],
   print:text=>console.log(text),printErr:text=>console.error(text),
-  setStatus:text=>{if(!ready&&text)$('status').textContent=text;},
-  onAbort:reason=>{$('status').textContent='Jotta Text could not start: '+reason;},
+  setStatus:text=>{if(!ready&&text)notice(text);},
+  onAbort:reason=>{notice('Jotta Text could not start: '+reason);},
   preRun:[()=>{
     const module=globalThis.Module,FS=module.FS;
     module.ENV.HOME='/persist';module.ENV.LITE_USERDIR='/persist/user';
@@ -157,5 +157,5 @@ globalThis.Module={
   }],
 };
 const engine=document.createElement('script');engine.src=new URL('./jotta-text.js',import.meta.url).href;
-engine.onerror=()=>{$('status').textContent='Editor engine missing. Build with scripts/build-web.sh and serve dist/web over HTTP.';};
+engine.onerror=()=>{notice('Editor engine missing. Build with scripts/build-web.sh and serve dist/web over HTTP.');};
 document.body.append(engine);

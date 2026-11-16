@@ -4,6 +4,8 @@ The browser edition compiles this project's patched Lite XL engine to WebAssembl
 It runs the shared Lua interface, editor, themes, settings, Portuguese translation,
 font controls, resizable explorer, document outline and native Markdown preview.
 The browser shell adds file imports, downloads and a sandboxed HTML live preview.
+Every action is in the editor's own menu bar, as on the desktop; the page has no
+separate toolbar.
 No editor service, remote language server or CDN is needed at runtime.
 
 ## Build and run
@@ -41,19 +43,23 @@ has not changed. Build scripts do not install host packages or publish a website
 
 ## Files, recovery and previews
 
-- **Open file** imports one or more files. **Import folder** keeps relative paths.
+- **File → Open File…** (Ctrl+O) imports one or more files. **File → Open
+  Folder…** (Ctrl+Shift+O) imports a folder and keeps relative paths.
   Imports create browser workspace copies; original device files remain unchanged.
   Existing workspace files are not silently overwritten.
 - Settings, imported folders, tab state and unsaved document text are stored in
   IndexedDB for the current site origin. Recovery snapshots sync periodically;
-  wait for **Workspace saved in this browser** before closing the tab. Private
+  the browser asks for confirmation if you close the tab before the latest edits
+  are stored. A notice over the editor appears only if browser storage is
+  unavailable or fails; click it to dismiss it. Private
   browsing, storage restrictions or clearing site data can remove that state.
   Download important files; browser recovery is not a backup.
-- **Download file**, Save and Save As write/download a copy of the current buffer.
+- **File → Save** (Ctrl+S) and **Save As…** write and download a copy of the
+  current buffer.
   The browser controls the final destination and whether to show a system save
   dialog. Folders are restored from browser copies rather than retaining access
   to the original device directory.
-- HTML live preview follows unsaved HTML and the open CSS/JavaScript buffers.
+- HTML live preview (**Tools → Web Preview**, Ctrl+Alt+P) follows unsaved HTML and the open CSS/JavaScript buffers.
   Local linked stylesheets, classic scripts and images are embedded from the
   workspace. Preview scripts run in an iframe without same-origin access to the
   editor's recovery data. Module/import-map applications and projects needing a

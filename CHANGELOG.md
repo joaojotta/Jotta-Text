@@ -13,6 +13,11 @@
   `JottaText.exe`.
 - CI builds the installer with NSIS and tests install, upgrade and uninstall on
   Windows. Releases now publish five packages.
+- Web: remove the toolbar above the editor. Its Open file, Import folder,
+  Download file, Live preview and Settings buttons duplicated the editor's menu
+  bar (File, Tools and Preferences menus) and shortcuts. Loading progress and
+  startup or storage problems appear as a notice over the editor, and the browser
+  asks before closing the tab while recent edits are not yet stored.
 
 ## Jotta Text v0.6.2 — 2026-11-15
 
