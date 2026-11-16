@@ -7,7 +7,7 @@
 <p align="center">
   A focused editor for code, Markdown and web projects.<br>
   Linux · Windows · Web<br>
-  <strong>Version 0.7.0</strong>
+  <strong>Version 0.7.1</strong>
 </p>
 
 <p align="center">

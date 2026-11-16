@@ -25,7 +25,11 @@ function M.apply()
   local state=M.active;if not state or state.invalid then return end
   local ok,err=prefs.save(state.draft)
   if not ok then core.error('Could not save preferences: %s',err);return end
-  M.close()
+  -- Stay open: only Cancel, × or Escape close the window. Continue from what
+  -- was saved, keeping the current tab and scroll position.
+  state.draft=prefs.snapshot();state.dropdown=nil;state.edit=nil;state.toggle_animations=nil
+  core.log('Settings applied.')
+  core.redraw=true
 end
 function M.select(tab)
   local state=M.active;state.dropdown=nil;state.selector_wheel=nil;state.tab=tab;M.last_tab=tab;state.scroll=0;state.edit=nil;state.invalid=nil;state.focus='tab-'..tab;core.redraw=true
@@ -542,7 +546,8 @@ function M.draw()
     for i=d.offset+1,math.min(#d.options,d.offset+d.visible) do
       local item=d.options[i];local y=d.y+4*SCALE+(i-d.offset-1)*d.row
       if i==d.index then visual.rounded(d.x+4*SCALE,y,d.w-18*SCALE,d.row,4*SCALE,style.ui_selection or style.selection) end
-      visual.text(style.font,item.value==s.draft[d.id] and '✓' or '',d.x+7*SCALE,y,20*SCALE,d.row,style.accent,'center')
+      -- An icon, not '✓': the UI fonts (Rubik or a user choice) may lack U+2713.
+      if item.value==s.draft[d.id] then visual.icon('check',d.x+10*SCALE,y+(d.row-14*SCALE)/2,14*SCALE,style.accent) end
       visual.text(style.font,item.text,d.x+32*SCALE,y,d.w-50*SCALE,d.row,style.text)
     end
     core.pop_clip_rect()

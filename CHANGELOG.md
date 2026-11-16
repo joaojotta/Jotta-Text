@@ -1,5 +1,14 @@
 # Changelog
 
+## Jotta Text v0.7.1 — 2026-11-16
+
+- Settings: **Apply** saves and applies your changes but keeps the window open,
+  so you can keep adjusting; close it with **Cancel**, × or Escape. The status
+  bar confirms "Settings applied."
+- Settings: the check mark beside the selected option in drop-down lists (for
+  example the font lists) showed as a box, because the interface font has no ✓
+  character. It is now drawn from the app's icon font.
+
 ## Jotta Text v0.7.0 — 2026-11-16
 
 - Windows installer: `JottaText-<version>-windows-x64-setup.exe` installs Jotta

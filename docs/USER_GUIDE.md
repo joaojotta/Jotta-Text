@@ -214,8 +214,9 @@ preferences. The Shortcuts section is searchable.
 Font and theme samples preview pending choices. Theme Editor opens the custom
 color picker and stores overrides separately for each theme. **Reset section**
 restores that section's defaults in the draft. **Apply** saves the changes and
-updates the editor; **Cancel**, Escape and the close button discard pending
-changes. Preferences persist across restarts without editing open documents.
+updates the editor, and the window stays open so you can keep adjusting;
+**Cancel**, Escape and the close button close it, discarding any changes not yet
+applied. Preferences persist across restarts without editing open documents.
 The existing font and color selectors remain available from their menus.
 
 ## Inline color picker
@@ -267,7 +268,7 @@ macOS packaging is not implemented.
 ## Optional GitHub trial
 
 Enable **Preferences → Settings → General → GitHub trial**, choose **Apply**,
-then use **Tools → GitHub (experimental)…** or **Ctrl+Alt+G**. The desktop trial
+close Settings, then use **Tools → GitHub (experimental)…** or **Ctrl+Alt+G**. The desktop trial
 opens a simple setup screen: **sign in through your browser**, **choose a local
 folder**, and **choose a GitHub repository**. Connect once, then use **Sync now**
 to commit and push saved changes. The folder/repository pairing is remembered.

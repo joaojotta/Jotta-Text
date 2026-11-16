@@ -22,6 +22,8 @@ local toggle
 for _,control in ipairs(settings.active.controls) do if control.id=='github_trial' then toggle=control end end
 assert(toggle and toggle.kind=='toggle','General settings is missing the trial switch')
 settings.activate(toggle);settings.apply();assert(prefs.values.github_trial)
+-- Apply keeps the window open; close it as the user would.
+assert(settings.active,'Apply closed the settings window');settings.close()
 assert(menu_has_trial(),'enabled trial did not appear in Tools')
 local source=core.open_doc(core.project_dir..'/style.css');core.root_view:open_doc(source)
 source:text_input('/* unsaved editor change */')
@@ -101,5 +103,5 @@ assert(texts['Teste do GitHub'],'trial title is not localized')
 view.close();prefs.values.ui_language='en';prefs.apply_config()
 settings.open();settings.select('general');settings.layout()
 for _,control in ipairs(settings.active.controls) do if control.id=='github_trial' then settings.activate(control);break end end
-settings.apply();assert(not prefs.values.github_trial and not command.perform('litefront:github-trial'),'trial did not disable immediately')
+settings.apply();settings.close();assert(not prefs.values.github_trial and not command.perform('litefront:github-trial'),'trial did not disable immediately')
 assert(not menu_has_trial(),'disabled trial remained in the Tools menu')

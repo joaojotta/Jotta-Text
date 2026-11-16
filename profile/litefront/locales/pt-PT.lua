@@ -301,6 +301,7 @@ return {
   ["Project Search"]="Pesquisa no projeto",
   ["Open Log"]="Abrir registo",
   ["Settings"]="Definições",
+  ["Settings applied."]="Definições aplicadas.",
   ["Welcome"]="Bem-vindo",
   ["Search…"]="Pesquisar…",
   ["No matches"]="Nenhum resultado",

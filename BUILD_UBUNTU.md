@@ -33,7 +33,7 @@ With the native prerequisites above installed:
 
 ```bash
 bash scripts/build-appimage.sh
-# Output: dist/JottaText-0.7.0-x86_64.AppImage (or aarch64 on that architecture)
+# Output: dist/JottaText-0.7.1-x86_64.AppImage (or aarch64 on that architecture)
 python3 tests/test-appimage.py
 ```
 
@@ -58,8 +58,8 @@ Build the distributable bundle:
 
 ```bash
 bash scripts/build-flatpak.sh
-# Output: dist/JottaText-0.7.0-x86_64.flatpak
-# Checksum: dist/JottaText-0.7.0-x86_64.flatpak.sha256
+# Output: dist/JottaText-0.7.1-x86_64.flatpak
+# Checksum: dist/JottaText-0.7.1-x86_64.flatpak.sha256
 ```
 
 The script checks that the Freedesktop 25.08 SDK/runtime are already available,
@@ -72,7 +72,7 @@ inside the compilation sandbox.
 Install a newly built bundle, or update an existing installation:
 
 ```bash
-flatpak install --user --or-update ./dist/JottaText-0.7.0-x86_64.flatpak
+flatpak install --user --or-update ./dist/JottaText-0.7.1-x86_64.flatpak
 ```
 
 Rebuild the Flatpak after source changes; rebuilding the native app leaves the

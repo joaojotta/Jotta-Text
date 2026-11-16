@@ -25,8 +25,8 @@ python tests/test-windows.py
 
 Output, each with its SHA-256 checksum:
 
-- `dist/JottaText-0.7.0-windows-x64-setup.exe`, the installer
-- `dist/JottaText-0.7.0-windows-x64-portable.zip`, the portable ZIP
+- `dist/JottaText-0.7.1-windows-x64-setup.exe`, the installer
+- `dist/JottaText-0.7.1-windows-x64-portable.zip`, the portable ZIP
 
 The build script installs nothing. Source and npm dependencies are pinned; the
 build uses the installed UCRT64 library versions and collects their imported
