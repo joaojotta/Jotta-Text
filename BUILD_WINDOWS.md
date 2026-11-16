@@ -60,6 +60,9 @@ same as above. To test it under Wine (this needs a desktop session):
 python3 tests/test-windows.py --wine
 ```
 
+If the editor reports `No displays available` under Wine, run the test with
+`SDL_VIDEODRIVER=windows`; editor windows then open briefly on your desktop.
+
 ## Installer
 
 The installer is per-user and needs no administrator access. It installs to

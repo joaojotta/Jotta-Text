@@ -118,6 +118,19 @@ def patch_start(data, target):
                            "package.cpath = DATADIR .. '/?.' .. suffix .. ';' .. DATADIR .. '/?/init.' .. suffix .. ';'\n")
 
 
+def patch_common(data):
+    """Let mkdirp split Windows paths at either separator.
+
+    Upstream splits only at PATHSEP, but callers join with '/' (for example
+    USERDIR .. '/empty-workspace'). On Windows, when the parent did not exist yet
+    (an installed copy's first start, with no portable user/ folder), mkdirp
+    treated 'JottaText/empty-workspace' as one name and startup failed.
+    """
+    with Source(data / 'core/common.lua') as common:
+        common.replace('local updir, basedir = path:match("(.*)["..PATHSEP.."](.+)$")',
+                       'local updir, basedir = path:match(PATHSEP == "\\\\" and "(.*)[/\\\\](.+)$" or "(.*)/(.+)$")')
+
+
 def patch_core(data):
     """Load only the built-in profile, start without a project and preserve sessions."""
     with Source(data / 'core/init.lua') as core:
@@ -393,6 +406,7 @@ def main():
         shutil.rmtree(data)
     copy(UPSTREAM / 'data', data)
     patch_start(data, args.target)
+    patch_common(data)
     patch_core(data)
     copy_application(data)
     patch_builtin_plugins(data)

@@ -87,7 +87,12 @@ def inject_harness(app):
 def run_editor(app,userdir,phase,**changes):
     result_file=userdir/'test-result'
     result_file.unlink(missing_ok=True)
-    result=run([app/'JottaText.exe'],30,JOTTA_TEST_PHASE=phase,**changes)
+    try:result=run([app/'JottaText.exe'],60,JOTTA_TEST_PHASE=phase,**changes)
+    except subprocess.TimeoutExpired as error:
+        # A startup error waits in a message box; its text is also in error.txt.
+        log=userdir/'error.txt'
+        raise AssertionError(('editor did not exit',str(userdir),sorted(p.name for p in userdir.glob('*')) if userdir.is_dir() else 'no settings folder',
+                              log.read_text(errors='replace') if log.is_file() else 'no error.txt')) from error
     assert result.returncode==0 and result_file.is_file(),(result.returncode,result.stdout,result.stderr)
     assert result_file.read_text()=='PASS',result_file.read_text()
 
@@ -136,7 +141,15 @@ def test_installer(temp):
         shipped=sorted(name.split('/',1)[1] for name in zipped.namelist()
                        if not name.endswith('/') and name.split('/')[1] not in PORTABLE_ONLY)
     target=temp/'Programas do utilizador'/'Jotta Text'
-    appdata=temp/'Definições'
+    if wine:
+        # Wine replaces APPDATA with its prefix's own folder; use that one.
+        appdata_value=registry_value(r'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders','AppData')
+        appdata=Path(subprocess.run(['winepath','-u',appdata_value],env=env,capture_output=True,text=True,check=True).stdout.strip())
+        settings=dict(JOTTA_TEST_USERDIR=appdata_value+'\\JottaText')
+    else:
+        appdata=temp/'Definições'
+        # The app appends \JottaText to APPDATA exactly as given, short names included.
+        settings=dict(APPDATA=windows_path(appdata),JOTTA_TEST_USERDIR=windows_path(appdata/'JottaText'))
     userdir=appdata/'JottaText'
     shortcut=start_menu_shortcut()
 
@@ -157,11 +170,13 @@ def test_installer(temp):
         assert registry_value(UNINSTALL_KEY,'DisplayVersion')==version
         assert same_path(registry_value(UNINSTALL_KEY,'InstallLocation'),target)
         assert shortcut.is_file(),f'missing Start menu shortcut {shortcut}'
+        node=run([target/'data/litefront/node/node.exe','--version'],60)
+        assert node.returncode==0 and node.stdout.startswith('v24.'),(node.stdout,node.stderr)
         inject_harness(target)
 
     install()
-    # The app appends \JottaText to APPDATA exactly as given, short names included.
-    settings=dict(APPDATA=windows_path(appdata),JOTTA_TEST_USERDIR=windows_path(userdir))
+    # No settings folder yet: the first start must create it (and its parents).
+    assert not userdir.exists()
     run_editor(target,userdir,'1',**settings)
     install()  # Upgrade in place: unsaved documents must survive it.
     run_editor(target,userdir,'2',**settings)
@@ -180,7 +195,8 @@ def test_installer(temp):
 
 with tempfile.TemporaryDirectory(prefix='Jotta portátil test ') as directory:
     temp=Path(directory)
-    env=dict(os.environ,SDL_VIDEODRIVER='dummy')
+    env=dict(os.environ)
+    env.setdefault('SDL_VIDEODRIVER','dummy')
     prefix=[]
     if wine:
         env.update(WINEPREFIX=str(temp/'wine-prefix'),WINEDEBUG='-all',WINEDLLOVERRIDES='mscoree,mshtml=')
